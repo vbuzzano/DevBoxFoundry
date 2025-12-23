@@ -153,6 +153,15 @@ Write-Host "💾 Writing compiled output..." -ForegroundColor Yellow
 $finalContent = $compiledContent -join "`n"
 Set-Content -Path $OutputFile -Value $finalContent -Encoding UTF8 -NoNewline -ErrorAction Stop
 
+# Copy bootstrap installer to dist
+Write-Host "📋 Copying bootstrap installer..." -ForegroundColor Yellow
+$BootstrapSource = Join-Path $SourceDir 'devbox.ps1'
+$BootstrapDest = Join-Path $OutputDir 'devbox.ps1'
+if (Test-Path $BootstrapSource) {
+    Copy-Item -Path $BootstrapSource -Destination $BootstrapDest -Force
+    Write-Verbose "  Copied: devbox.ps1 to dist/"
+}
+
 # Verify output
 if (Test-Path $OutputFile) {
     $outputSize = (Get-Item $OutputFile).Length
