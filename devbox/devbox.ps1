@@ -160,6 +160,11 @@ function Initialize-NewProject {
         }
         Write-Success 'Repository cloned to .box'
     }
+    catch {
+        Write-Error-Custom "Clone failed: $_"
+        Pop-Location
+        exit 1
+    }
     finally {
         Pop-Location
     }
@@ -349,10 +354,20 @@ DefaultFPU=
         Write-Success 'Created: .env'
     }
     else {
-        Write-Host '  ℹ️ .env already exists, backing up' -ForegroundColor Cyan
+        Write-Step 'Backing up existing .env'
         $BackupPath = "$EnvPath.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         Copy-Item $EnvPath $BackupPath
         Write-Success "Backup: $([System.IO.Path]::GetFileName($BackupPath))"
+    }
+
+    # Backup existing critical files if they exist
+    foreach ($File in @('README.md', 'Makefile', 'box.config.psd1')) {
+        $FilePath = Join-Path $CurrentDir $File
+        if (Test-Path $FilePath) {
+            $BackupPath = "$FilePath.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+            Copy-Item $FilePath $BackupPath -Force
+            Write-Host "  💾 Backed up: $File → $(Split-Path $BackupPath -Leaf)" -ForegroundColor Gray
+        }
     }
 
     # Copy box.ps1 to root
@@ -362,6 +377,9 @@ DefaultFPU=
     if (Test-Path $SourceBox) {
         Copy-Item $SourceBox $TargetBox -Force
         Write-Success 'Copied: box.ps1 to root'
+    }
+    else {
+        Write-Host "  ⚠️ box.ps1 not found in .box/" -ForegroundColor Yellow
     }
 
     Write-Host ''
@@ -431,8 +449,9 @@ function Main {
 
             $UseVSCodeChoice = $UseVSCode
             if (-not $PSBoundParameters.ContainsKey('UseVSCode')) {
+                Write-Host ''
                 $VSCodeAnswer = Read-Host 'Configure VS Code integration? [y/n]'
-                $UseVSCodeChoice = $VSCodeAnswer -eq 'y'
+                $UseVSCodeChoice = $VSCodeAnswer -eq 'y' -or $VSCodeAnswer -eq 'yes'
             }
 
             Initialize-NewProject -ProjectName $ProjectName -Description $Description -VSCode:$UseVSCodeChoice
@@ -441,6 +460,8 @@ function Main {
             Add-ToExistingProject
         }
     }
+
+    Write-Host ''
 }
 
 # Run main
