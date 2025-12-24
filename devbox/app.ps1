@@ -26,7 +26,7 @@
 
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("install", "uninstall", "env", "pkg", "help", "")]
+    [ValidateSet("install", "uninstall", "env", "pkg", "template", "help", "")]
     [string]$Command = "install",
     
     [Parameter(Position = 1)]
@@ -53,6 +53,7 @@ function Show-QuickHelp {
     Write-Host "  uninstall        Remove all generated files (back to factory state)" -ForegroundColor White
     Write-Host "  env              Manage environment variables" -ForegroundColor White
     Write-Host "  pkg              Manage packages" -ForegroundColor White
+    Write-Host "  template         Manage template generation" -ForegroundColor White
     Write-Host "  help             Show this help" -ForegroundColor White
     Write-Host ""
     Write-Host "Env subcommands:" -ForegroundColor Yellow
@@ -62,6 +63,10 @@ function Show-QuickHelp {
     Write-Host "Pkg subcommands:" -ForegroundColor Yellow
     Write-Host "  pkg list         List all packages with status" -ForegroundColor White
     Write-Host "  pkg update       Update/install packages interactively" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Template subcommands:" -ForegroundColor Yellow
+    Write-Host "  template update  Regenerate all templates" -ForegroundColor White
+    Write-Host "  template apply <name>  Regenerate specific template" -ForegroundColor White
     Write-Host ""
 }
 
@@ -122,6 +127,19 @@ switch ($Command) {
             Show-PackageList
         } else {
             Invoke-Pkg -Sub $SubCommand
+        }
+    }
+    "template" {
+        if ($SubCommand -eq "apply") {
+            if ($Args.Count -eq 0) {
+                Write-Host "Error: template name required" -ForegroundColor Red
+                Write-Host "Usage: box template apply <name>" -ForegroundColor Yellow
+                exit 1
+            }
+            Invoke-TemplateApply -Template $Args[0]
+        }
+        else {
+            Invoke-EnvUpdate
         }
     }
     default {

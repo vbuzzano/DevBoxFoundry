@@ -26,4 +26,6 @@ if ($SetupDir) {
 . "$script:IncDir\ui.ps1"
 . "$script:IncDir\help.ps1"
 . "$script:IncDir\wizard.ps1"
+. "$script:IncDir\templates.ps1"
 . "$script:IncDir\commands.ps1"
+
