@@ -481,15 +481,16 @@ DefaultFPU=
             Write-Success "Backup: $([System.IO.Path]::GetFileName($BackupPath))"
         }
 
-        # Backup existing critical files if they exist
-        foreach ($File in @('README.md', 'Makefile', 'box.config.psd1')) {
-            $FilePath = Join-Path $CurrentDir $File
-            if (Test-Path $FilePath) {
-                $BackupPath = "$FilePath.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-                Copy-Item $FilePath $BackupPath -Force
-                Write-Host "  💾 Backed up: $File → $(Split-Path $BackupPath -Leaf)" -ForegroundColor Gray
-            }
+        # Backup existing critical files ONLY if they will be overwritten
+        # Currently, we only keep .env backup since others are skipped or created fresh
+        # This preserves user data when adding DevBox to existing projects
+        $FilesToBackup = @{
+            '.env' = $EnvPath  # Already backed up above if exists
         }
+
+        # Note: box.config.psd1 is NOT backed up (skipped if exists)
+        # Note: README.md is NOT backed up (not modified in add mode)
+        # Note: Makefile is NOT backed up (not generated in add mode)
 
         # Copy box.ps1 to root
         Write-Step 'Setting up box.ps1'
