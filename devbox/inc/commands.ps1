@@ -148,9 +148,9 @@ function Invoke-EnvUpdate {
         # Find the actual template file - search for *.template and *.template.*
         # Pattern: For "README.md", search for "README.template.md" or "README.template"
         # Pattern: For "Makefile", search for "Makefile.template" or "Makefile.template.*"
-        
+
         $actualTemplate = $null
-        
+
         # Try: output_name.template (e.g., Makefile.template)
         if (Test-Path ".box/templates/$template.template" -PathType Leaf) {
             $actualTemplate = Get-Item ".box/templates/$template.template"
@@ -162,7 +162,7 @@ function Invoke-EnvUpdate {
                 $actualTemplate = Get-Item $templateWithExt
             }
         }
-        
+
         if (-not $actualTemplate) {
             Write-Host "  [!] Template file not found for: $template" -ForegroundColor Yellow
             $failCount++
@@ -173,6 +173,17 @@ function Invoke-EnvUpdate {
         Write-Host "  [*] Processing: $template..." -ForegroundColor White
 
         try {
+            # Validate file size
+            if (-not (Test-TemplateFileSize -FilePath $templatePath)) {
+                $failCount++
+                continue
+            }
+
+            # Validate encoding
+            if (-not (Test-FileEncoding -FilePath $templatePath)) {
+                Write-Host "    [WARN] Template may not be UTF-8 encoded: $template" -ForegroundColor Yellow
+            }
+
             # Read template
             $content = Get-Content $templatePath -Raw -Encoding UTF8
 
@@ -260,6 +271,16 @@ function Invoke-TemplateApply {
     try {
         # Load template variables
         $variables = Merge-TemplateVariables
+
+        # Validate file size
+        if (-not (Test-TemplateFileSize -FilePath $templatePath)) {
+            exit 1
+        }
+
+        # Validate encoding
+        if (-not (Test-FileEncoding -FilePath $templatePath)) {
+            Write-Host "  [WARN] Template may not be UTF-8 encoded" -ForegroundColor Yellow
+        }
 
         # Read template
         $content = Get-Content $templatePath -Raw -Encoding UTF8

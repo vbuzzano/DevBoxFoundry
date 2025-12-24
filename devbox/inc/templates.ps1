@@ -45,7 +45,7 @@ function Get-TemplateVariables {
         return $variables
     }
 
-    $content = Get-Content $EnvPath -Raw
+    $content = Get-Content $EnvPath -Raw -Encoding utf8
 
     # Parse key=value pairs, skip comments and empty lines
     $content -split "`n" | ForEach-Object {
@@ -98,7 +98,7 @@ function Get-ConfigBoxVariables {
     }
 
     try {
-        $data = Invoke-Expression (Get-Content $ConfigPath -Raw)
+        $data = Invoke-Expression (Get-Content $ConfigPath -Raw -Encoding utf8)
 
         if ($data -is [hashtable]) {
             foreach ($key in $data.Keys) {
@@ -154,6 +154,9 @@ function Merge-TemplateVariables {
         $merged[$key] = $configVars[$key]
     }
 
+    # Validate case sensitivity
+    Test-TokenCaseSensitivity -Variables $merged
+
     return $merged
 }
 
@@ -198,6 +201,9 @@ function Process-Template {
     $tokensReplaced = 0
     $tokensUnknown = @()
 
+    # Detect circular references
+    Test-CircularReferences -Variables $Variables -TemplateName $TemplateName
+
     # Find all {{TOKEN}} patterns
     $pattern = '\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}'
     $matches = [regex]::Matches($result, $pattern)
@@ -208,7 +214,9 @@ function Process-Template {
 
         if ($Variables.ContainsKey($token)) {
             $value = $Variables[$token]
-            $result = $result -replace [regex]::Escape($placeholder), $value
+            # Escape special characters in value for regex replacement
+            $escapedValue = [regex]::Escape($value)
+            $result = $result -replace [regex]::Escape($placeholder), $escapedValue
             $tokensReplaced++
         }
         else {
@@ -225,6 +233,221 @@ function Process-Template {
     Write-Verbose "Replaced $tokensReplaced tokens in $TemplateName"
 
     return $result
+}
+
+# ============================================================================
+# VALIDATION FUNCTIONS
+# ============================================================================
+
+function Test-TokenCaseSensitivity {
+    <#
+    .SYNOPSIS
+        Detect tokens with different cases (e.g., PROJECT_NAME vs project_name)
+
+    .DESCRIPTION
+        Checks if the same token exists in multiple case variations and warns the user.
+
+    .PARAMETER Variables
+        Hashtable with variable values
+
+    .EXAMPLE
+        Test-TokenCaseSensitivity -Variables @{ PROJECT_NAME = "App"; project_name = "app" }
+        # Warns about case sensitivity issue
+    #>
+    param(
+        [hashtable]$Variables
+    )
+
+    $lowercaseKeys = @{}
+    $duplicates = @()
+
+    foreach ($key in $Variables.Keys) {
+        $lower = $key.ToLower()
+        if ($lowercaseKeys.ContainsKey($lower)) {
+            $duplicates += "$($lowercaseKeys[$lower]) vs $key"
+        }
+        else {
+            $lowercaseKeys[$lower] = $key
+        }
+    }
+
+    if ($duplicates.Count -gt 0) {
+        $dupeList = $duplicates -join ', '
+        Write-Warning "Case sensitivity issue detected in tokens: $dupeList"
+    }
+}
+
+function Test-CircularReferences {
+    <#
+    .SYNOPSIS
+        Detect circular token references in variables
+
+    .DESCRIPTION
+        Checks if variable values contain references to other variables that could
+        create circular dependencies (e.g., VAR1={{VAR2}}, VAR2={{VAR1}}).
+
+    .PARAMETER Variables
+        Hashtable with variable values
+
+    .PARAMETER TemplateName
+        Template name for logging
+
+    .EXAMPLE
+        Test-CircularReferences -Variables @{ VAR1 = "{{VAR2}}"; VAR2 = "{{VAR1}}" }
+        # Warns about circular reference
+    #>
+    param(
+        [hashtable]$Variables,
+        [string]$TemplateName = "template"
+    )
+
+    $pattern = '\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}'
+    $circularRefs = @()
+
+    foreach ($key in $Variables.Keys) {
+        $value = $Variables[$key]
+        if ($value -match $pattern) {
+            $referencedToken = $matches[1]
+            # Check if referenced token also references back
+            if ($Variables.ContainsKey($referencedToken)) {
+                $referencedValue = $Variables[$referencedToken]
+                if ($referencedValue -match "\{\{$key\}\}") {
+                    $circularRefs += "$key <-> $referencedToken"
+                }
+            }
+        }
+    }
+
+    if ($circularRefs.Count -gt 0) {
+        $circularList = $circularRefs | Select-Object -Unique | Join-String -Separator ', '
+        Write-Warning "Circular reference detected in $TemplateName : $circularList"
+    }
+}
+
+function Test-FileEncoding {
+    <#
+    .SYNOPSIS
+        Validate that file is UTF-8 encoded
+
+    .DESCRIPTION
+        Checks file encoding to ensure it's UTF-8 compatible.
+
+    .PARAMETER FilePath
+        Path to file to validate
+
+    .OUTPUTS
+        [bool] True if UTF-8, False otherwise
+
+    .EXAMPLE
+        $isUtf8 = Test-FileEncoding -FilePath 'Makefile.template'
+    #>
+    param(
+        [string]$FilePath
+    )
+
+    if (-not (Test-Path $FilePath)) {
+        return $false
+    }
+
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($FilePath)
+
+        # Check for UTF-8 BOM
+        if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+            return $true
+        }
+
+        # Try to decode as UTF-8
+        $encoding = [System.Text.UTF8Encoding]::new($false, $true)
+        try {
+            $null = $encoding.GetString($bytes)
+            return $true
+        }
+        catch {
+            return $false
+        }
+    }
+    catch {
+        Write-Warning "Failed to validate encoding for $FilePath : $_"
+        return $false
+    }
+}
+
+function Test-TemplateFileSize {
+    <#
+    .SYNOPSIS
+        Validate template file size is within acceptable limits
+
+    .DESCRIPTION
+        Checks if file is larger than 10MB and rejects it to prevent performance issues.
+
+    .PARAMETER FilePath
+        Path to template file
+
+    .OUTPUTS
+        [bool] True if acceptable size, False if too large
+
+    .EXAMPLE
+        $isValid = Test-TemplateFileSize -FilePath 'large.template'
+    #>
+    param(
+        [string]$FilePath
+    )
+
+    if (-not (Test-Path $FilePath)) {
+        return $false
+    }
+
+    $maxSizeBytes = 10MB
+    $fileSize = (Get-Item $FilePath).Length
+
+    if ($fileSize -gt $maxSizeBytes) {
+        $sizeMB = [math]::Round($fileSize / 1MB, 2)
+        Write-Error "Template file too large: $FilePath ($sizeMB MB). Maximum size is 10 MB."
+        return $false
+    }
+
+    return $true
+}
+
+function Test-FileWritePermission {
+    <#
+    .SYNOPSIS
+        Test if current user has write permission to path
+
+    .DESCRIPTION
+        Checks write access to a directory or file without actually writing.
+
+    .PARAMETER Path
+        Path to test (file or directory)
+
+    .OUTPUTS
+        [bool] True if writable, False otherwise
+
+    .EXAMPLE
+        $canWrite = Test-FileWritePermission -Path 'C:\Projects'
+    #>
+    param(
+        [string]$Path
+    )
+
+    try {
+        $testPath = $Path
+        if (Test-Path $testPath -PathType Container) {
+            $testFile = Join-Path $testPath ".write_test_$(Get-Random)"
+        }
+        else {
+            $testFile = "$Path.write_test"
+        }
+
+        # Try to create a test file
+        $null = New-Item -Path $testFile -ItemType File -Force -ErrorAction Stop
+        Remove-Item -Path $testFile -Force -ErrorAction SilentlyContinue
+        return $true
+    }
+    catch {
+        return $false
+    }
 }
 
 # ============================================================================
@@ -260,6 +483,13 @@ function Backup-File {
 
     if (-not (Test-Path $FilePath)) {
         Write-Warning "File not found for backup: $FilePath"
+        return $null
+    }
+
+    # Test write permission before attempting backup
+    $directory = Split-Path $FilePath -Parent
+    if (-not (Test-FileWritePermission -Path $directory)) {
+        Write-Error "Insufficient permissions to create backup in: $directory"
         return $null
     }
 
