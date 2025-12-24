@@ -349,22 +349,15 @@ function Get-AvailableTemplates {
         return $templates
     }
 
-    Get-ChildItem -Path $TemplateDir -Filter '*.template' -File | ForEach-Object {
-        # Remove .template extension
-        $name = $_.BaseName
+    Get-ChildItem -Path $TemplateDir -Filter '*.template*' -File | ForEach-Object {
+        # Remove .template or .template.* extension
+        $name = $_.Name -replace '\.template.*$', ''
+        # Add back the extension if it's a secondary extension (like .md)
+        if ($_.Name -match '\.template\.(\w+)$') {
+            $name = $name + '.' + $Matches[1]
+        }
         $templates += $name
     }
 
     return $templates
 }
-
-# Export functions
-Export-ModuleMember -Function @(
-    'Get-TemplateVariables',
-    'Get-ConfigBoxVariables',
-    'Merge-TemplateVariables',
-    'Process-Template',
-    'Backup-File',
-    'New-GenerationHeader',
-    'Get-AvailableTemplates'
-)

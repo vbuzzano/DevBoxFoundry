@@ -117,7 +117,7 @@ function Get-RemoteDownloadUrl {
 
 function Show-RemoteInstallationError {
     param([string]$ErrorMessage)
-    
+
     Write-Host ''
     Write-Error-Custom 'Remote installation failed'
     Write-Host "  $ErrorMessage" -ForegroundColor Yellow
@@ -150,7 +150,7 @@ function Track-Creation {
 function Rollback-Creation {
     Write-Host ''
     Write-Step 'Rolling back changes...'
-    
+
     # Reverse order (newest first)
     for ($i = $Script:CreatedItems.Count - 1; $i -ge 0; $i--) {
         $item = $Script:CreatedItems[$i]
@@ -164,7 +164,7 @@ function Rollback-Creation {
             }
         }
     }
-    
+
     $Script:CreatedItems = @()
 }
 
@@ -211,19 +211,19 @@ function Initialize-NewProject {
         New-Item -ItemType Directory -Path $BoxPath -Force | Out-Null
         Track-Creation $BoxPath 'directory'
         Write-Success 'Created: .box'
-        
+
         # Download/copy box.ps1 from release
         Write-Step 'Downloading box.ps1'
         try {
             $BoxUrl = 'https://github.com/vbuzzano/DevBoxFoundry/raw/main/dist/box.ps1'
             $BoxDest = Join-Path $BoxPath 'box.ps1'
-            
+
             # Try local copy first (for development), then remote download
             $LocalBoxPath = Join-Path (Split-Path $Script:MyInvocation.MyCommand.Path) 'box.ps1'
             if (-not (Test-Path $LocalBoxPath)) {
                 $LocalBoxPath = 'box.ps1'
             }
-            
+
             if (Test-Path $LocalBoxPath) {
                 Copy-Item $LocalBoxPath $BoxDest -Force
                 Write-Success 'Copied: box.ps1 to .box/'
@@ -234,7 +234,7 @@ function Initialize-NewProject {
                 Invoke-RestMethod -Uri $BoxUrl -OutFile $BoxDest -ErrorAction Stop
                 Write-Success 'Downloaded: box.ps1 to .box/'
             }
-            
+
             if (-not (Test-Path $BoxDest)) {
                 throw 'box.ps1 not found'
             }
@@ -326,7 +326,7 @@ See **.box/** directory for build system documentation.
             $VSCodeDir = Join-Path $TargetDir '.vscode'
             New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
             Track-Creation $VSCodeDir 'directory'
-            
+
             $SettingsPath = Join-Path $VSCodeDir 'settings.json'
             $SettingsContent = @"
 {
@@ -402,19 +402,19 @@ function Add-ToExistingProject {
             New-Item -ItemType Directory -Path $BoxDir -Force | Out-Null
             Track-Creation $BoxDir 'directory'
             Write-Success 'Created: .box'
-            
+
             # Download/copy box.ps1
             Write-Step 'Downloading box.ps1'
             try {
                 $BoxUrl = 'https://github.com/vbuzzano/DevBoxFoundry/raw/main/dist/box.ps1'
                 $BoxDest = Join-Path $BoxDir 'box.ps1'
-                
+
                 # Try local copy first (for development), then remote download
                 $LocalBoxPath = Join-Path (Split-Path $Script:MyInvocation.MyCommand.Path) 'box.ps1'
                 if (-not (Test-Path $LocalBoxPath)) {
                     $LocalBoxPath = 'box.ps1'
                 }
-                
+
                 if (Test-Path $LocalBoxPath) {
                     Copy-Item $LocalBoxPath $BoxDest -Force
                     Write-Success 'Copied: box.ps1 to .box/'
@@ -425,7 +425,7 @@ function Add-ToExistingProject {
                     Invoke-RestMethod -Uri $BoxUrl -OutFile $BoxDest -ErrorAction Stop
                     Write-Success 'Downloaded: box.ps1 to .box/'
                 }
-                
+
                 if (-not (Test-Path $BoxDest)) {
                     throw 'box.ps1 not found'
                 }
@@ -513,7 +513,7 @@ DefaultFPU=
             $VSCodeDir = Join-Path $CurrentDir '.vscode'
             New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
             Track-Creation $VSCodeDir 'directory'
-            
+
             $SettingsPath = Join-Path $VSCodeDir 'settings.json'
             $SettingsContent = @"
 {
@@ -589,7 +589,7 @@ function Main {
                 Write-Host "  [i] init - Create new project" -ForegroundColor White
                 Write-Host "  [a] add  - Add DevBox to existing project" -ForegroundColor White
                 $Choice = Read-Host 'Select'
-                
+
                 if ($Choice -eq 'i') {
                     $Mode = 'init'
                 }
@@ -613,7 +613,7 @@ function Main {
                         exit 1
                     }
                 }
-                
+
                 if (-not $Description) {
                     $Description = Read-Host 'Description (optional)'
                 }

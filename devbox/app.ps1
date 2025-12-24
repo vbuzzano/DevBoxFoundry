@@ -1,13 +1,13 @@
-<# 
+<#
 .SYNOPSIS
     ApolloDevBox Development Environment Setup
-    
+
 .DESCRIPTION
     Manages the development environment for AmigaOS cross-compilation.
-    
+
 .PARAMETER Command
     The command to execute: install, uninstall, env, pkg, help
-    
+
 .EXAMPLE
     .\box.ps1                    # Install (default)
     .\box.ps1 install            # Install all
@@ -18,7 +18,7 @@
     .\box.ps1 pkg list           # List packages
     .\box.ps1 pkg update         # Update packages
     .\box.ps1 help               # Show help
-    
+
 .NOTES
     Author: Vincent Buzzano (ReddoC)
     Date: December 2025
@@ -28,13 +28,13 @@ param(
     [Parameter(Position = 0)]
     [ValidateSet("install", "uninstall", "env", "pkg", "template", "help", "")]
     [string]$Command = "install",
-    
+
     [Parameter(Position = 1)]
     [string]$SubCommand = "",
-    
+
     [Parameter(Position = 2, ValueFromRemainingArguments = $true)]
     [string[]]$Args,
-    
+
     [switch]$Help
 )
 

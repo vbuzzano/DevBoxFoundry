@@ -9,12 +9,12 @@ function Invoke-Install {
             return
         }
     }
-    
+
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Magenta
     Write-Host "  $($Config.Project.Name) Setup" -ForegroundColor Magenta
     Write-Host "========================================" -ForegroundColor Magenta
-    
+
     # Run install script if exists
     $installScript = Join-Path $SetupDir "install.ps1"
     if (Test-Path $installScript) {
@@ -23,15 +23,15 @@ function Invoke-Install {
         # Inline install
         Create-Directories
         Ensure-SevenZip
-        
+
         foreach ($pkg in $AllPackages) {
             Process-Package $pkg
         }
-        
+
         Cleanup-Temp
         Setup-Makefile
         Generate-AllEnvFiles
-        
+
         Show-InstallComplete
     }
 }
@@ -41,7 +41,7 @@ function Invoke-Uninstall {
     Write-Host "========================================" -ForegroundColor Yellow
     Write-Host "  Uninstall Environment" -ForegroundColor Yellow
     Write-Host "========================================" -ForegroundColor Yellow
-    
+
     $uninstallScript = Join-Path $SetupDir "uninstall.ps1"
     if (Test-Path $uninstallScript) {
         & $uninstallScript
@@ -52,7 +52,7 @@ function Invoke-Uninstall {
 
 function Invoke-Env {
     param([string]$Sub, [string[]]$Params)
-    
+
     switch ($Sub) {
         "list" {
             Show-EnvList
@@ -71,7 +71,7 @@ function Invoke-Env {
 
 function Invoke-Pkg {
     param([string]$Sub)
-    
+
     switch ($Sub) {
         "list" {
             Show-PackageList
@@ -81,16 +81,16 @@ function Invoke-Pkg {
             Write-Host "========================================" -ForegroundColor Cyan
             Write-Host "  Update Packages" -ForegroundColor Cyan
             Write-Host "========================================" -ForegroundColor Cyan
-            
+
             Ensure-SevenZip
-            
+
             foreach ($pkg in $AllPackages) {
                 Process-Package $pkg
             }
-            
+
             # Only update env files, not Makefile
             Generate-AllEnvFiles
-            
+
             Write-Host ""
             Write-Host "[OK] Packages updated" -ForegroundColor Green
         }
@@ -128,14 +128,14 @@ function Invoke-EnvUpdate {
     $variables = Merge-TemplateVariables
 
     if ($variables.Count -eq 0) {
-        Write-Host "  ⚠ No variables found in .env or box.config.psd1" -ForegroundColor Yellow
+        Write-Host "  [WARN] No variables found in .env or box.config.psd1" -ForegroundColor Yellow
     }
 
     # Get available templates
     $templates = Get-AvailableTemplates -TemplateDir '.box/templates'
 
     if ($templates.Count -eq 0) {
-        Write-Host "  ℹ No templates found in .box/templates/" -ForegroundColor Cyan
+        Write-Host "  [INFO] No templates found in .box/templates/" -ForegroundColor Cyan
         return
     }
 
@@ -143,10 +143,34 @@ function Invoke-EnvUpdate {
     $failCount = 0
 
     foreach ($template in $templates) {
-        $templatePath = ".box/templates/$template.template"
         $outputPath = $template
 
-        Write-Host "  ⏳ Processing: $template..." -ForegroundColor White
+        # Find the actual template file - search for *.template and *.template.*
+        # Pattern: For "README.md", search for "README.template.md" or "README.template"
+        # Pattern: For "Makefile", search for "Makefile.template" or "Makefile.template.*"
+        
+        $actualTemplate = $null
+        
+        # Try: output_name.template (e.g., Makefile.template)
+        if (Test-Path ".box/templates/$template.template" -PathType Leaf) {
+            $actualTemplate = Get-Item ".box/templates/$template.template"
+        }
+        else {
+            # Try: output_name_without_ext.template.ext (e.g., README.template.md)
+            $templateWithExt = ".box/templates/$($template -split '\.' | Select-Object -First 1).template.$($template -split '\.' | Select-Object -Last 1)"
+            if (Test-Path $templateWithExt -PathType Leaf) {
+                $actualTemplate = Get-Item $templateWithExt
+            }
+        }
+        
+        if (-not $actualTemplate) {
+            Write-Host "  [!] Template file not found for: $template" -ForegroundColor Yellow
+            $failCount++
+            continue
+        }
+        $templatePath = $actualTemplate.FullName
+
+        Write-Host "  [*] Processing: $template..." -ForegroundColor White
 
         try {
             # Read template
@@ -164,17 +188,17 @@ function Invoke-EnvUpdate {
             if (Test-Path $outputPath) {
                 $backupPath = Backup-File -FilePath $outputPath
                 if ($backupPath) {
-                    Write-Host "    💾 Backed up: $(Split-Path $backupPath -Leaf)" -ForegroundColor Gray
+                    Write-Host "    [BKP] Backed up: $(Split-Path $backupPath -Leaf)" -ForegroundColor Gray
                 }
             }
 
             # Write generated file
             Set-Content -Path $outputPath -Value $output -Encoding UTF8 -Force
-            Write-Host "    ✓ Generated: $outputPath" -ForegroundColor Green
+            Write-Host "    [OK] Generated: $outputPath" -ForegroundColor Green
             $successCount++
         }
         catch {
-            Write-Host "    ❌ Error: $_" -ForegroundColor Red
+            Write-Host "    [ERR] Error: $_" -ForegroundColor Red
             $failCount++
         }
     }
@@ -224,7 +248,7 @@ function Invoke-TemplateApply {
     # Check if template exists
     if (-not (Test-Path $templatePath)) {
         $available = Get-AvailableTemplates -TemplateDir '.box/templates'
-        Write-Host "  ❌ Template not found: $Template" -ForegroundColor Red
+        Write-Host "  [ERR] Template not found: $Template" -ForegroundColor Red
         Write-Host ""
         Write-Host "Available templates:" -ForegroundColor Yellow
         foreach ($t in $available) {
@@ -241,7 +265,7 @@ function Invoke-TemplateApply {
         $content = Get-Content $templatePath -Raw -Encoding UTF8
 
         # Process tokens
-        Write-Host "  ⏳ Processing template..." -ForegroundColor White
+        Write-Host "  [*] Processing template..." -ForegroundColor White
         $processed = Process-Template -TemplateContent $content -Variables $variables -TemplateName $Template
 
         # Add generation header
@@ -253,16 +277,16 @@ function Invoke-TemplateApply {
         if (Test-Path $outputPath) {
             $backupPath = Backup-File -FilePath $outputPath
             if ($backupPath) {
-                Write-Host "  💾 Backed up: $(Split-Path $backupPath -Leaf)" -ForegroundColor Gray
+                Write-Host "  [BKP] Backed up: $(Split-Path $backupPath -Leaf)" -ForegroundColor Gray
             }
         }
 
         # Write generated file
         Set-Content -Path $outputPath -Value $output -Encoding UTF8 -Force
-        Write-Host "  ✓ Generated: $outputPath" -ForegroundColor Green
+        Write-Host "  [OK] Generated: $outputPath" -ForegroundColor Green
     }
     catch {
-        Write-Host "  ❌ Error: $_" -ForegroundColor Red
+        Write-Host "  [ERR] Error: $_" -ForegroundColor Red
         exit 1
     }
 
