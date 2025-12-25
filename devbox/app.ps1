@@ -68,6 +68,14 @@ function Show-QuickHelp {
     Write-Host "  template update  Regenerate all templates" -ForegroundColor White
     Write-Host "  template apply <name>  Regenerate specific template" -ForegroundColor White
     Write-Host ""
+    Write-Host "Examples:" -ForegroundColor Yellow
+    Write-Host "  box env update           # Regenerate all templates from .env and config" -ForegroundColor Gray
+    Write-Host "  box template apply Makefile  # Regenerate only Makefile" -ForegroundColor Gray
+    Write-Host "  box template apply README.md # Regenerate only README.md" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Template system replaces {{TOKEN}} with values from .env and config files." -ForegroundColor Cyan
+    Write-Host "Backups are created automatically before regeneration (.bak.timestamp)." -ForegroundColor Cyan
+    Write-Host ""
 }
 
 if ($Help -or $Command -eq "help") {

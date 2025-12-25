@@ -214,9 +214,9 @@ function Process-Template {
 
         if ($Variables.ContainsKey($token)) {
             $value = $Variables[$token]
-            # Escape special characters in value for regex replacement
-            $escapedValue = [regex]::Escape($value)
-            $result = $result -replace [regex]::Escape($placeholder), $escapedValue
+            # Escape $ in replacement value (PowerShell -replace treats $ as special)
+            $safeValue = $value -replace '\$', '$$'
+            $result = $result -replace [regex]::Escape($placeholder), $safeValue
             $tokensReplaced++
         }
         else {

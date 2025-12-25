@@ -91,11 +91,11 @@ Test-Case -Name "T033: Case sensitivity detection warns about duplicates" -Test 
     }
     # Add a lowercase variant manually
     $vars['project_name'] = "app2"
-    
+
     # Should generate warnings but not fail
     $warningCount = 0
     $null = Test-TokenCaseSensitivity -Variables $vars -WarningVariable warnings -WarningAction SilentlyContinue
-    
+
     if ($warnings.Count -gt 0) {
         return "PASS"
     }
@@ -213,13 +213,13 @@ Test-Case -Name "T041: Large file detection (>10MB rejected)" -Test {
     $largeFile = ".\tests\large-test.tmp"
     $content = "X" * (11 * 1024 * 1024)  # 11 MB
     $content | Out-File -FilePath $largeFile -Encoding utf8 -Force -NoNewline
-    
+
     # Test-TemplateFileSize writes error and returns false - catch both
     $ErrorActionPreference = 'SilentlyContinue'
     $isValid = Test-TemplateFileSize -FilePath $largeFile 2>$null
     $ErrorActionPreference = 'Stop'
     Remove-Item $largeFile -Force -ErrorAction SilentlyContinue
-    
+
     # Should return false for large files
     if (-not $isValid) {
         return "PASS"

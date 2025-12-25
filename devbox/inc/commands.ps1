@@ -124,8 +124,21 @@ function Invoke-EnvUpdate {
     Write-Host "  Updating Templates" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
 
+    # Verbose info
+    if ($VerbosePreference -eq 'Continue') {
+        Write-Verbose "Template directory: .box/templates/"
+        Write-Verbose "Variable sources: .env, box.config.psd1"
+    }
+
     # Load template variables
     $variables = Merge-TemplateVariables
+
+    if ($VerbosePreference -eq 'Continue' -and $variables.Count -gt 0) {
+        Write-Verbose "Loaded $($variables.Count) variables:"
+        foreach ($key in ($variables.Keys | Sort-Object)) {
+            Write-Verbose "  $key = $($variables[$key])"
+        }
+    }
 
     if ($variables.Count -eq 0) {
         Write-Host "  [WARN] No variables found in .env or box.config.psd1" -ForegroundColor Yellow
@@ -172,6 +185,11 @@ function Invoke-EnvUpdate {
 
         Write-Host "  [*] Processing: $template..." -ForegroundColor White
 
+        if ($VerbosePreference -eq 'Continue') {
+            Write-Verbose "Template file: $templatePath"
+            Write-Verbose "Output file: $outputPath"
+        }
+
         try {
             # Validate file size
             if (-not (Test-TemplateFileSize -FilePath $templatePath)) {
@@ -200,12 +218,18 @@ function Invoke-EnvUpdate {
                 $backupPath = Backup-File -FilePath $outputPath
                 if ($backupPath) {
                     Write-Host "    [BKP] Backed up: $(Split-Path $backupPath -Leaf)" -ForegroundColor Gray
+                    if ($VerbosePreference -eq 'Continue') {
+                        Write-Verbose "Backup created: $backupPath"
+                    }
                 }
             }
 
             # Write generated file
             Set-Content -Path $outputPath -Value $output -Encoding UTF8 -Force
             Write-Host "    [OK] Generated: $outputPath" -ForegroundColor Green
+            if ($VerbosePreference -eq 'Continue') {
+                Write-Verbose "Written $($output.Length) characters to $outputPath"
+            }
             $successCount++
         }
         catch {
@@ -246,6 +270,10 @@ function Invoke-TemplateApply {
     Write-Host "  Applying Template: $Template" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
 
+    if ($VerbosePreference -eq 'Continue') {
+        Write-Verbose "Template name: $Template"
+    }
+
     # Normalize template name (add .template if missing)
     if (-not $Template.EndsWith('.template')) {
         $templatePath = ".box/templates/$Template.template"
@@ -271,6 +299,12 @@ function Invoke-TemplateApply {
     try {
         # Load template variables
         $variables = Merge-TemplateVariables
+
+        if ($VerbosePreference -eq 'Continue') {
+            Write-Verbose "Loaded $($variables.Count) variables from .env and config"
+            Write-Verbose "Template path: $templatePath"
+            Write-Verbose "Output path: $outputPath"
+        }
 
         # Validate file size
         if (-not (Test-TemplateFileSize -FilePath $templatePath)) {
