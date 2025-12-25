@@ -44,7 +44,7 @@
         ObjDir       = "build/obj"
         DistDir      = "dist"
         VendorDir    = "vendor"
-        
+
         # Tools (in .setup/tools)
         ACP          = "./.setup/tools/acp.exe"
         GDB          = "./.setup/tools/bgdbserver"
@@ -117,6 +117,18 @@
             Mode        = "auto"
             Extract     = @(
                 "TOOL:*:vendor/tools/bgdbserver:GDB"
+            )
+        },
+        @{
+            Name        = "LHA for Windows"
+            SourceType  = "sourceforge"
+            Url         = "https://gnuwin32.sourceforge.net/downlinks/lha-bin-zip.php"
+            File        = "lha-1.14i-bin.zip"
+            Description = "LHA compression/decompression tool v1.14i (GnuWin32)"
+            Archive     = "zip"
+            Mode        = "auto"
+            Extract     = @(
+                "TOOL:bin/lha.exe:vendor/tools:LHA"
             )
         }
     )

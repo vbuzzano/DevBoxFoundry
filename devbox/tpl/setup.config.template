@@ -44,9 +44,19 @@
     # - "TOOL:bin/*:tools"                     → Tools/binaries
     # - "LIB:libs/*.lib:lib"                   → Libraries
     # - "FILE:readme.txt:docs"                 → Single file
+    #
+    # Package Source Types:
+    # ----------------------
+    # SourceType = "http"        → Standard HTTP download (default)
+    # SourceType = "sourceforge" → SourceForge with redirect handling
+    # SourceType = "git"         → Git clone from repository
+    #
+    # Git-specific options:
+    # - KeepGit = $true/$false   → Preserve .git/ directory after clone
+    # - FilterPaths = @("path/")  → Sparse checkout (only these paths)
     # ========================================================================
     Packages = @(
-        # Example package:
+        # Example: Standard HTTP download
         # @{
         #     Name        = "MyLibrary"
         #     Url         = "https://example.com/mylib.lha"
@@ -58,6 +68,32 @@
         #         "LIB:mylib/*:vendor/mylib:MYLIB_PATH"
         #     )
         # }
+
+        # Example: SourceForge download
+        # @{
+        #     Name        = "LHA"
+        #     SourceType  = "sourceforge"
+        #     Url         = "https://sourceforge.net/projects/lha/files/latest/download"
+        #     File        = "lha.zip"
+        #     Description = "LHA compression tool"
+        #     Archive     = "zip"
+        #     Extract     = @(
+        #         "TOOL:lha.exe:tools:LHA_PATH"
+        #     )
+        # }
+
+        # Example: Git repository clone
+        # @{
+        #     Name        = "MySDK"
+        #     SourceType  = "git"
+        #     Url         = "https://github.com/user/mysdk.git"
+        #     Description = "My SDK from git"
+        #     KeepGit     = $false          # Remove .git/ after clone
+        #     FilterPaths = @("sdk/", "include/")  # Optional sparse checkout
+        #     Extract     = @(
+        #         "SDK:sdk/*:vendor/mysdk:MYSDK_PATH"
+        #     )
+        # }
     )
 
     # ========================================================================
@@ -66,10 +102,10 @@
     Build = @{
         # Program name for the executable (defaults to Project.Name)
         ProgramName = "MyProgram"
-        
+
         # Default CPU target (m68000, m68020, m68040, m68080)
         DefaultCPU  = "m68020"
-        
+
         # Default FPU (empty, 68020, 68040, 68080)
         DefaultFPU  = ""
     }

@@ -103,9 +103,9 @@ Description: {{DESCRIPTION}}
         # 6. Verify output
         $result = Get-Content "README.md" -Raw -Encoding utf8
 
-        if ($result -like "*WorkflowTest*" -and 
-            $result -like "*1.0.0*" -and 
-            $result -like "*TestUser*" -and 
+        if ($result -like "*WorkflowTest*" -and
+            $result -like "*1.0.0*" -and
+            $result -like "*TestUser*" -and
             $result -like "*Test Project*") {
             return $true
         }
@@ -143,7 +143,7 @@ Custom field: {{AUTHOR}}
         # 3. Verify new content
         $result = Get-Content "README.md" -Raw -Encoding utf8
 
-        if ($result -like "*Modified Template*" -and 
+        if ($result -like "*Modified Template*" -and
             $result -like "*Custom field: TestUser*") {
             return $true
         }
@@ -185,7 +185,7 @@ Regex: {{PROJECT_REGEX}}
         $hasPath = $processed -match [regex]::Escape('C:\Users\Test$Special.Path')
         $hasURL = $processed -like '*https://example.com/repo?query=value&other=123*'
         $hasRegex = $processed -match [regex]::Escape('^[a-z]+$')
-        
+
         if ($hasPath -and $hasURL -and $hasRegex) {
             return $true
         }

@@ -3,6 +3,64 @@
 # ============================================================================
 
 # ============================================================================
+# Logging
+# ============================================================================
+
+function Write-PackageLog {
+    <#
+    .SYNOPSIS
+    Writes a log message to the package installation log file.
+
+    .DESCRIPTION
+    Appends a timestamped log entry to the package installation log.
+    Creates the log directory if it doesn't exist.
+
+    .PARAMETER Message
+    The message to log
+
+    .PARAMETER LogPath
+    Optional custom log path. If not specified, uses .box/logs/package-install.log
+
+    .PARAMETER Level
+    Log level: INFO, WARN, ERROR (default: INFO)
+
+    .EXAMPLE
+    Write-PackageLog -Message "Installing package: vbcc" -Level INFO
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+
+        [string]$LogPath,
+
+        [ValidateSet('INFO', 'WARN', 'ERROR')]
+        [string]$Level = 'INFO'
+    )
+
+    # Determine log file path
+    if (-not $LogPath) {
+        $logDir = Join-Path $BaseDir ".box\logs"
+        if (-not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
+        $LogPath = Join-Path $logDir "package-install.log"
+    }
+
+    # Format log entry
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+
+    # Append to log file
+    try {
+        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8
+    }
+    catch {
+        # Silently fail if logging fails (don't block operations)
+        Write-Verbose "Failed to write log: $_"
+    }
+}
+
+# ============================================================================
 # Configuration Merge
 # ============================================================================
 
@@ -11,15 +69,15 @@ function Merge-Hashtable {
         [hashtable]$Base,
         [hashtable]$Override
     )
-    
+
     $result = $Base.Clone()
-    
+
     foreach ($key in $Override.Keys) {
         $overrideValue = $Override[$key]
-        
+
         if ($result.ContainsKey($key)) {
             $baseValue = $result[$key]
-            
+
             # Both are hashtables -> recursive merge
             if ($baseValue -is [hashtable] -and $overrideValue -is [hashtable]) {
                 $result[$key] = Merge-Hashtable $baseValue $overrideValue
@@ -38,7 +96,7 @@ function Merge-Hashtable {
             $result[$key] = $overrideValue
         }
     }
-    
+
     return $result
 }
 
@@ -47,7 +105,7 @@ function Merge-Config {
         [hashtable]$SysConfig,
         [hashtable]$UserConfig
     )
-    
+
     return Merge-Hashtable $SysConfig $UserConfig
 }
 
@@ -165,10 +223,10 @@ function Ask-String {
         [string]$Default = "",
         [bool]$Required = $true
     )
-    
+
     $defaultText = if ($Default) { " [$Default]" } else { "" }
     $response = Read-Host "    $Prompt$defaultText"
-    
+
     if ([string]::IsNullOrWhiteSpace($response)) {
         if ($Default) { return $Default }
         if ($Required) {
@@ -187,25 +245,25 @@ function Ask-Number {
         [int]$Min = [int]::MinValue,
         [int]$Max = [int]::MaxValue
     )
-    
+
     $defaultText = if ($Default -ne 0) { " [$Default]" } else { "" }
     $response = Read-Host "    $Prompt$defaultText"
-    
+
     if ([string]::IsNullOrWhiteSpace($response)) {
         return $Default
     }
-    
+
     $number = 0
     if (-not [int]::TryParse($response, [ref]$number)) {
         Write-Err "Invalid number: $response"
         exit 1
     }
-    
+
     if ($number -lt $Min -or $number -gt $Max) {
         Write-Err "Number must be between $Min and $Max"
         exit 1
     }
-    
+
     return $number
 }
 
@@ -215,20 +273,20 @@ function Ask-Path {
         [string]$Default = "",
         [bool]$MustExist = $true
     )
-    
+
     $path = Ask-String -Prompt $Prompt -Default $Default -Required $MustExist
-    
+
     if ([string]::IsNullOrWhiteSpace($path)) { return "" }
-    
+
     # Convert to absolute if relative
     if (-not [System.IO.Path]::IsPathRooted($path)) {
         $path = Join-Path $BaseDir $path
     }
-    
+
     if ($MustExist -and -not (Test-Path $path)) {
         Write-Err "Path does not exist: $path"
         exit 1
     }
-    
+
     return $path
 }
