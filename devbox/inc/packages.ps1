@@ -2,6 +2,236 @@
 # Package Management Functions
 # ============================================================================
 
+function Test-PackageInstalled {
+    <#
+    .SYNOPSIS
+    Checks if a package is already installed via system, vendor, or environment variable.
+    
+    .DESCRIPTION
+    Detection priority:
+    1. DetectEnv - Environment variable exists (fastest)
+    2. DetectFile - File found in system PATH
+    3. DetectFile - File found in vendor/tools/
+    4. DetectCommand - Command executes successfully
+    5. Package state - Previously installed by box
+    
+    .PARAMETER Package
+    Hashtable with package definition including DetectEnv, DetectFile, DetectCommand properties
+    
+    .OUTPUTS
+    PSCustomObject with properties: Installed (bool), Source (string), Path (string)
+    #>
+    param([hashtable]$Package)
+    
+    # Priority 1: Environment variable
+    if ($Package.DetectEnv) {
+        $envValue = [System.Environment]::GetEnvironmentVariable($Package.DetectEnv)
+        if ($envValue) {
+            Write-Info "Found $($Package.Name) via `$env:$($Package.DetectEnv): $envValue"
+            return @{
+                Installed = $true
+                Source = "env"
+                Path = $envValue
+            }
+        }
+    }
+    
+    # Priority 2: File in system PATH
+    if ($Package.DetectFile) {
+        $systemCmd = Get-Command $Package.DetectFile -ErrorAction SilentlyContinue
+        if ($systemCmd) {
+            Write-Info "Found system $($Package.Name): $($systemCmd.Source)"
+            return @{
+                Installed = $true
+                Source = "system"
+                Path = $systemCmd.Source
+            }
+        }
+        
+        # Priority 3: File in vendor/tools/
+        $vendorPath = Join-Path $VendorDir "tools/$($Package.DetectFile)"
+        if (Test-Path $vendorPath) {
+            Write-Info "Found local $($Package.Name): $vendorPath"
+            return @{
+                Installed = $true
+                Source = "vendor"
+                Path = $vendorPath
+            }
+        }
+    }
+    
+    # Priority 4: Execute command test
+    if ($Package.DetectCommand) {
+        try {
+            $null = Invoke-Expression "$($Package.DetectCommand) 2>&1"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Info "Verified $($Package.Name) via: $($Package.DetectCommand)"
+                return @{
+                    Installed = $true
+                    Source = "command"
+                    Path = $Package.DetectCommand
+                }
+            }
+        } catch {
+            # Command failed, continue
+        }
+    }
+    
+    # Priority 5: Package state (installed by box previously)
+    $state = Get-PackageState -Name $Package.Name
+    if ($state -and $state.installed) {
+        return @{
+            Installed = $true
+            Source = "state"
+            Path = "vendor/$($Package.Name)"
+        }
+    }
+    
+    return @{
+        Installed = $false
+        Source = $null
+        Path = $null
+    }
+}
+
+function Ensure-Tool {
+    <#
+    .SYNOPSIS
+    Ensures a critical tool is available, auto-installing to vendor/tools/ if missing.
+    
+    .DESCRIPTION
+    Used for essential tools like 7z.exe that are required for package extraction.
+    Checks system PATH first, then vendor/tools/, then auto-installs if missing.
+    
+    .PARAMETER ToolName
+    Name of the tool executable (e.g., "7z.exe")
+    
+    .PARAMETER PackageConfig
+    Hashtable with package definition for auto-install (Name, Url, File, Archive, Extract)
+    
+    .OUTPUTS
+    String path to the tool executable
+    #>
+    param(
+        [string]$ToolName,
+        [hashtable]$PackageConfig
+    )
+    
+    # Check system PATH
+    $systemTool = Get-Command $ToolName -ErrorAction SilentlyContinue
+    if ($systemTool) {
+        Write-Info "Using system $ToolName from: $($systemTool.Source)"
+        return $systemTool.Source
+    }
+    
+    # Check vendor/tools/
+    $vendorPath = Join-Path $VendorDir "tools/$ToolName"
+    if (Test-Path $vendorPath) {
+        Write-Info "Using local $ToolName from: $vendorPath"
+        return $vendorPath
+    }
+    
+    # Auto-install
+    Write-Info "Installing $ToolName to vendor/tools/..."
+    
+    $sourceType = if ($PackageConfig.SourceType) { $PackageConfig.SourceType } else { "http" }
+    $archive = Download-File -Url $PackageConfig.Url -FileName $PackageConfig.File -SourceType $sourceType
+    
+    if (-not $archive) {
+        Write-Err "Failed to download $ToolName"
+        throw "Cannot proceed without $ToolName"
+    }
+    
+    $result = Extract-Package -Archive $archive -Name $PackageConfig.Name -ArchiveType $PackageConfig.Archive -ExtractRules $PackageConfig.Extract
+    
+    if (Test-Path $vendorPath) {
+        Write-Success "$ToolName installed successfully"
+        return $vendorPath
+    } else {
+        throw "$ToolName installation failed"
+    }
+}
+
+function Validate-PackageDependencies {
+    <#
+    .SYNOPSIS
+    Validates that required environment variables exist when package installation is refused.
+    
+    .DESCRIPTION
+    When user chooses not to install a package, this function:
+    1. Extracts required env vars from Extract rules
+    2. Checks if env vars already exist
+    3. Prompts for manual paths if missing
+    4. Validates paths with Test-Path
+    5. Saves to .env file
+    
+    .PARAMETER Package
+    Hashtable with package definition including Extract rules
+    
+    .OUTPUTS
+    Hashtable of environment variable names and paths
+    #>
+    param([hashtable]$Package)
+    
+    # Extract required env vars from Extract rules
+    $requiredEnvs = @()
+    if ($Package.Extract) {
+        foreach ($rule in $Package.Extract) {
+            if ($rule -match ':([A-Z_]+)$') {
+                $requiredEnvs += $Matches[1]
+            }
+        }
+    }
+    
+    if ($requiredEnvs.Count -eq 0) {
+        return @{}
+    }
+    
+    $envPaths = @{}
+    
+    foreach ($envVar in $requiredEnvs) {
+        # Check if already set
+        $existingValue = [System.Environment]::GetEnvironmentVariable($envVar)
+        if ($existingValue) {
+            $envPaths[$envVar] = $existingValue
+            Write-Info "$envVar already set to: $existingValue"
+            continue
+        }
+        
+        # Prompt for manual path
+        Write-Warn "$envVar is required for compilation/build"
+        
+        while ($true) {
+            $manualPath = Read-Host "Enter path for $envVar (or 'skip' to abort)"
+            
+            if ($manualPath -eq 'skip' -or [string]::IsNullOrWhiteSpace($manualPath)) {
+                Write-Err "Missing required dependency: $envVar"
+                throw "Cannot proceed without $envVar"
+            }
+            
+            # Validate path
+            if (Test-Path $manualPath) {
+                $envPaths[$envVar] = $manualPath
+                
+                # Save to .env
+                $envFilePath = Join-Path $ProjectRoot ".env"
+                Add-Content -Path $envFilePath -Value "$envVar=$manualPath"
+                
+                # Set in current session
+                [System.Environment]::SetEnvironmentVariable($envVar, $manualPath)
+                
+                Write-Success "Set $envVar=$manualPath"
+                break
+            } else {
+                Write-Warn "Path not found: $manualPath"
+                Write-Info "Please provide a valid path or type 'skip' to abort"
+            }
+        }
+    }
+    
+    return $envPaths
+}
+
 function Remove-Package {
     param([string]$Name)
 
@@ -31,6 +261,33 @@ function Process-Package {
     $existingEnvs = if ($pkgState -and $pkgState.envs) { $pkgState.envs } else { @{} }
 
     Write-Step "$name - $($Item.Description)"
+
+    # T029: Check if package already installed via system/vendor/env (US3)
+    $detection = Test-PackageInstalled -Package $Item
+    
+    if ($detection.Installed) {
+        # T030: Prompt user to use existing installation
+        Write-Info "$name detected: $($detection.Source) - $($detection.Path)"
+        $useExisting = Ask-Choice "Use existing installation? [Y/n]"
+        
+        if ($useExisting -ne "N") {
+            Write-Success "Using existing $name"
+            
+            # If env var based, ensure it's set
+            if ($detection.Source -eq "env" -and $Item.Extract) {
+                $envs = @{}
+                foreach ($rule in $Item.Extract) {
+                    if ($rule -match ':([A-Z_]+)$') {
+                        $envs[$Matches[1]] = $detection.Path
+                    }
+                }
+                Set-PackageState -Name $name -Installed $false -Files @() -Dirs @() -Envs $envs
+            }
+            
+            return
+        }
+        # User chose to install anyway, continue below
+    }
 
     # Already installed -> ask: Skip, Reinstall, Manual
     if ($isInstalled) {
@@ -80,9 +337,14 @@ function Process-Package {
             $choice = Ask-Choice "Install? [Y/n]"
 
             if ($choice -eq "N") {
-                $envs = Ask-ManualEnvs -ExtractRules $Item.Extract -ExistingEnvs $existingEnvs
-                Set-PackageState -Name $name -Installed $false -Files @() -Dirs @() -Envs $envs
-                Write-Success "Manual paths configured"
+                # T031-T032: User refused install, validate dependencies
+                try {
+                    $envs = Validate-PackageDependencies -Package $Item
+                    Set-PackageState -Name $name -Installed $false -Files @() -Dirs @() -Envs $envs
+                    Write-Success "Manual paths configured"
+                } catch {
+                    Write-Err "Dependency validation failed: $_"
+                }
                 return
             }
         }
@@ -98,6 +360,17 @@ function Process-Package {
     if (-not $archive) {
         Write-Err "Download failed for $name"
         return
+    }
+
+    if ($Item.Archive -eq "file") {
+        $result = Install-SingleFile -FilePath $archive -Name $name -ExtractRules $Item.Extract
+    } else {
+        $result = Extract-Package -Archive $archive -Name $name -ArchiveType $Item.Archive -ExtractRules $Item.Extract
+    }
+
+    Set-PackageState -Name $name -Installed $true -Files $result.Files -Dirs $result.Dirs -Envs $result.Envs
+    Write-Success "Installed"
+}
     }
 
     if ($Item.Archive -eq "file") {

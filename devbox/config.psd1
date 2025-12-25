@@ -64,6 +64,8 @@
             Description = "VBCC compiler for Windows x64"
             Archive     = "zip"
             Mode        = "auto"
+            DetectEnv   = "VBCC"
+            DetectFile  = "vc.exe"
             Extract     = @(
                 "TOOL:*:vendor/vbcc:VBCC"
             )
@@ -86,6 +88,7 @@
             Description = "AmigaOS NDK 3.9"
             Archive     = "lha"
             Mode        = "auto"
+            DetectEnv   = "NDK39"
             Extract     = @(
                 "NDK:NDK_3.9/*:vendor/NDK_3.9:NDK39"
             )
@@ -127,6 +130,8 @@
             Description = "LHA compression/decompression tool v1.14i (GnuWin32)"
             Archive     = "zip"
             Mode        = "auto"
+            DetectFile  = "lha.exe"
+            DetectCommand = "lha --help"
             Extract     = @(
                 "TOOL:bin/lha.exe:vendor/tools:LHA"
             )

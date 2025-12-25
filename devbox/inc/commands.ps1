@@ -24,8 +24,14 @@ function Invoke-Install {
         Create-Directories
         Ensure-SevenZip
 
+        # T035: Try/catch wrapper for continue-on-error (FR-016)
         foreach ($pkg in $AllPackages) {
-            Process-Package $pkg
+            try {
+                Process-Package $pkg
+            } catch {
+                Write-Err "Failed to process $($pkg.Name): $_"
+                Write-Info "Continuing with remaining packages..."
+            }
         }
 
         Cleanup-Temp
@@ -84,8 +90,14 @@ function Invoke-Pkg {
 
             Ensure-SevenZip
 
+            # T035: Try/catch wrapper for continue-on-error
             foreach ($pkg in $AllPackages) {
-                Process-Package $pkg
+                try {
+                    Process-Package $pkg
+                } catch {
+                    Write-Err "Failed to process $($pkg.Name): $_"
+                    Write-Info "Continuing with remaining packages..."
+                }
             }
 
             # Only update env files, not Makefile
