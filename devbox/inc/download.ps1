@@ -157,9 +157,9 @@ function Download-File {
 
     Write-Info "Downloading $FileName..."
 
-    # T020: Progress reporting for SourceForge
+    # T020/T037: Progress reporting for SourceForge
     if ($SourceType -eq 'sourceforge') {
-        Write-Info "Following SourceForge redirects..."
+        Write-Info "[1/2] Following SourceForge redirects..."
     }
 
     # T019: Integrate Invoke-WithRetry for downloads
@@ -170,7 +170,7 @@ function Download-File {
             # T018: SourceForge redirect handling - needs two-step process
             if ($SourceType -eq 'sourceforge') {
                 # Step 1: Get the download page to extract real download URL
-                Write-Info "Fetching SourceForge download page..."
+                Write-Info "[1/2] Fetching SourceForge download page..."
                 $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -MaximumRedirection 5 -AllowInsecureRedirect
 
                 # Extract the real download URL from meta refresh or download link
@@ -185,7 +185,7 @@ function Download-File {
                 if ($realUrl) {
                     # Decode HTML entities
                     $realUrl = $realUrl -replace '&amp;', '&'
-                    Write-Info "Real download URL found: $($realUrl.Substring(0, [Math]::Min(80, $realUrl.Length)))..."
+                    Write-Info "[2/2] Downloading binary from: $($realUrl.Substring(0, [Math]::Min(80, $realUrl.Length)))..."
 
                     # Step 2: Download from real URL
                     Invoke-WebRequest -Uri $realUrl -OutFile $outPath -UseBasicParsing -MaximumRedirection 5 -AllowInsecureRedirect
@@ -209,7 +209,7 @@ function Download-File {
         } -MaxAttempts 3 -InitialDelaySeconds 1
 
         $size = [math]::Round((Get-Item $outPath).Length / 1KB, 1)
-        Write-Info "Downloaded: $size KB"
+        Write-Success "Downloaded: $size KB"
         return $outPath
     }
     catch {

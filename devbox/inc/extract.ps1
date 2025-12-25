@@ -171,7 +171,7 @@ function Extract-Package {
     New-Item -ItemType Directory -Path $tempExtract -Force | Out-Null
 
     # Extract
-    Write-Info "Extracting $ArchiveType..."
+    Write-Info "Extracting $ArchiveType archive..."
     $result = & $SevenZipExe x $Archive -o"$tempExtract" -y 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Warn "Extraction warning: $result"
@@ -181,11 +181,17 @@ function Extract-Package {
     $allDirs = @()
     $allEnvs = @{}
 
+    # T037: Progress for extract rules
+    $totalRules = $ExtractRules.Count
+    $currentRule = 0
+
     # Process each extract rule - save state after each rule for crash recovery
     foreach ($rule in $ExtractRules) {
+        $currentRule++
         $parsed = Parse-ExtractRule $rule
         if (-not $parsed) { continue }
 
+        Write-Info "[$currentRule/$totalRules] Copying $($parsed.Pattern) to $($parsed.Destination)..."
         $copyResult = Copy-WithPattern -Source $tempExtract -Pattern $parsed.Pattern -Destination $parsed.Destination
         $allFiles += $copyResult.Files
         $allDirs += $copyResult.Dirs
@@ -197,6 +203,8 @@ function Extract-Package {
         # Save state incrementally after each rule (crash recovery)
         Set-PackageState -Name $Name -Installed $true -Files $allFiles -Dirs $allDirs -Envs $allEnvs
     }
+
+    Write-Success "Extracted $($allFiles.Count) files, $($allDirs.Count) directories"
 
     # Cleanup
     Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue

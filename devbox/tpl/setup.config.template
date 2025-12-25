@@ -49,11 +49,15 @@
     # ----------------------
     # SourceType = "http"        → Standard HTTP download (default)
     # SourceType = "sourceforge" → SourceForge with redirect handling
-    # SourceType = "git"         → Git clone from repository
     #
-    # Git-specific options:
-    # - KeepGit = $true/$false   → Preserve .git/ directory after clone
-    # - FilterPaths = @("path/")  → Sparse checkout (only these paths)
+    # Dependency Detection (NEW in Feature 004):
+    # ------------------------------------------
+    # DetectEnv = "VAR_NAME"     → Check if environment variable exists
+    # DetectFile = "file.exe"    → Check if file exists in PATH or vendor/tools/
+    # DetectCommand = "cmd"      → Run command to verify tool is available
+    #
+    # If detected, user is prompted to use existing installation instead of downloading.
+    # If user refuses but Extract rules require env vars, manual path validation is triggered.
     # ========================================================================
     Packages = @(
         # Example: Standard HTTP download
@@ -69,7 +73,7 @@
         #     )
         # }
 
-        # Example: SourceForge download
+        # Example: SourceForge download with dependency detection
         # @{
         #     Name        = "LHA"
         #     SourceType  = "sourceforge"
@@ -77,21 +81,24 @@
         #     File        = "lha.zip"
         #     Description = "LHA compression tool"
         #     Archive     = "zip"
+        #     DetectFile  = "lha.exe"       # Check if lha.exe already in PATH
+        #     DetectCommand = "lha --help"  # Verify it's working
         #     Extract     = @(
         #         "TOOL:lha.exe:tools:LHA_PATH"
         #     )
         # }
 
-        # Example: Git repository clone
+        # Example: Package with environment variable detection
         # @{
-        #     Name        = "MySDK"
-        #     SourceType  = "git"
-        #     Url         = "https://github.com/user/mysdk.git"
-        #     Description = "My SDK from git"
-        #     KeepGit     = $false          # Remove .git/ after clone
-        #     FilterPaths = @("sdk/", "include/")  # Optional sparse checkout
+        #     Name        = "VBCC"
+        #     Url         = "https://example.com/vbcc.lha"
+        #     File        = "vbcc.lha"
+        #     Description = "VBCC C Compiler for Amiga"
+        #     Archive     = "lha"
+        #     DetectEnv   = "VBCC"          # Check if $env:VBCC exists
+        #     DetectFile  = "vc.exe"        # Check if vc.exe in PATH
         #     Extract     = @(
-        #         "SDK:sdk/*:vendor/mysdk:MYSDK_PATH"
+        #         "SDK:vbcc/*:vendor/vbcc:VBCC"
         #     )
         # }
     )
