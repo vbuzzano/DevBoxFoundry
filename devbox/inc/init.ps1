@@ -2,17 +2,45 @@
 # AmigaDevBox - Initialization Module
 # ============================================================================
 # This file handles all box initialization: paths, configs, and functions.
-# Dot-source this from box.ps1 to keep the main script clean.
+# Compiled version includes embedded system config.
 # ============================================================================
 
 # ============================================================================
-# Constants (local to init, no $script: needed)
+# Constants
 # ============================================================================
 
-$CONFIG_FILENAME = 'config.psd1'
 $USER_CONFIG_FILENAME = 'box.config.psd1'
 $STATE_FILENAME = '.box/state.json'
-$FUNCTIONS_LOADER = 'inc\functions.ps1'
+
+# ============================================================================
+# Embedded System Configuration (replaces external config.psd1)
+# ============================================================================
+
+$script:SysConfig = @{
+    Directories = @(
+        "build/asm"
+        "build/obj"
+        "dist"
+    )
+    MakefileTemplate = ".box/template/Makefile.template"
+    BoxPaths = @{
+        Cache = ".box/cache"
+        Tools = ".box/tools"
+    }
+    UserConfigTemplate = ".box/template/box.config.template"
+    Paths = @{
+        SrcDir = "src"
+        IncludeDir = "include"
+        BuildDir = "build"
+        AsmDir = "build/asm"
+        ObjDir = "build/obj"
+        DistDir = "dist"
+        VendorDir = "vendor"
+        ACP = "./.box/tools/acp.exe"
+        GDB = "./.box/tools/bgdbserver"
+    }
+    Packages = @()
+}
 
 # ============================================================================
 # Derived Paths (BaseDir and BoxDir are set by caller)
@@ -22,31 +50,11 @@ $script:StateFile = Join-Path $BaseDir $STATE_FILENAME
 $script:EnvFile = Join-Path $BaseDir ".env"
 
 # ============================================================================
-# Load Functions (before config loading - needed for Merge-Config)
-# ============================================================================
-
-$script:FunctionsLoader = Join-Path $BoxDir $FUNCTIONS_LOADER
-if (-not (Test-Path $FunctionsLoader)) {
-    Write-Host "Functions loader not found: $FunctionsLoader" -ForegroundColor Red
-    exit 1
-}
-. $FunctionsLoader
-
-# ============================================================================
 # Configuration Loading
 # ============================================================================
 
-# Load system config
-$script:SysConfigFile = Join-Path $BoxDir $CONFIG_FILENAME
-if (-not (Test-Path $SysConfigFile)) {
-    Write-Host "$CONFIG_FILENAME not found in .box/" -ForegroundColor Red
-    exit 1
-}
-$script:SysConfig = Import-PowerShellDataFile $SysConfigFile
-
 # User config
 $script:UserConfigFile = Join-Path $BaseDir $USER_CONFIG_FILENAME
-$script:UserConfigTemplate = Join-Path $BaseDir $SysConfig.UserConfigTemplate
 
 # Handle missing user config based on command
 $script:SkipExecution = $false
