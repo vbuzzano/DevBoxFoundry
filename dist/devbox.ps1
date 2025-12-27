@@ -650,7 +650,7 @@ function Install-DevBoxGlobal {
         # When run via irm | iex, $PSCommandPath is empty - we need to download
         # When run as a local file, we can copy directly
         $targetPath = Join-Path $scriptsDir 'devbox.ps1'
-
+        
         if ([string]::IsNullOrEmpty($PSCommandPath)) {
             # Running via irm | iex - download the script
             Write-Step 'Downloading devbox.ps1 from GitHub...'
