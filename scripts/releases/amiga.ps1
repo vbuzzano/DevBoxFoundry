@@ -70,6 +70,9 @@ Copy-Item -Force "dist\box.ps1" "$ReleaseDir\box.ps1"
 Write-Host "   devbox.ps1 (bootstrap installer)..." -ForegroundColor Gray
 Copy-Item -Force "dist\devbox.ps1" "$ReleaseDir\devbox.ps1"
 
+Write-Host "   config.psd1 (system configuration)..." -ForegroundColor Gray
+Copy-Item -Force "$DevBoxDir\config.psd1" "$ReleaseDir\config.psd1"
+
 # Copy root files
 Write-Host ""
 Write-Host "📄 Copying documentation and metadata..." -ForegroundColor Yellow
