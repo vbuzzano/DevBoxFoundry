@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    Commits and pushes dist/release/ to release repository
+    Syncs and pushes dist/release/ to release repository
 
 .DESCRIPTION
-    Commits changes in dist/release/ directory and pushes to the configured
-    release repository (e.g., AmiDevBox). Reads configuration from .vscode/settings.json.
+    Clones or pulls the release repository (e.g., AmiDevBox), copies files from
+    dist/release/, commits, and pushes. Always stays in sync with remote.
+    Reads configuration from .vscode/settings.json.
 
 .PARAMETER Release
     Release configuration name (default: amiga)
@@ -24,6 +25,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $RELEASE_DIR = "dist\release"
+$TEMP_CLONE = Join-Path $env:TEMP "devbox-release-$(Get-Random)"
 
 Write-Host ""
 Write-Host "🚀 Releasing $Release..." -ForegroundColor Cyan
@@ -41,7 +43,7 @@ try {
     # Get release metadata from .vscode/settings.json
     $settingsPath = ".vscode\settings.json"
     $releaseName = $Release
-    $releaseRepo = "origin"
+    $releaseRepo = $null
 
     if (Test-Path $settingsPath) {
         Write-Host "📋 Reading release configuration..." -ForegroundColor Yellow
@@ -57,31 +59,52 @@ try {
                 Write-Host "   Repo: $releaseRepo" -ForegroundColor Gray
             }
             else {
-                Write-Host "   ⚠️  Release '$Release' not found in settings, using defaults" -ForegroundColor Yellow
+                Write-Host "❌ Error: Release '$Release' not found in settings" -ForegroundColor Red
+                $available = $releases.PSObject.Properties.Name -join ', '
+                Write-Host "   Available: $available" -ForegroundColor Yellow
+                exit 1
             }
         }
         else {
-            Write-Host "   ⚠️  No releases configured in settings, using defaults" -ForegroundColor Yellow
+            Write-Host "❌ Error: No releases configured in settings.json" -ForegroundColor Red
+            exit 1
         }
     }
     else {
-        Write-Host "   ⚠️  .vscode/settings.json not found, using defaults" -ForegroundColor Yellow
+        Write-Host "❌ Error: .vscode/settings.json not found" -ForegroundColor Red
+        exit 1
     }
 
-    # Verify .git exists in dist/release
-    if (-not (Test-Path "$RELEASE_DIR\.git")) {
-        Write-Host ""
-        Write-Host "🔧 Initializing git repository in $RELEASE_DIR..." -ForegroundColor Cyan
-        Push-Location $RELEASE_DIR
-        git init
-        git branch -M main
-        git remote add origin $releaseRepo
-        Pop-Location
-        Write-Host "   ✅ Git initialized" -ForegroundColor Green
+    if (-not $releaseRepo) {
+        Write-Host "❌ Error: Repository URL not configured for '$Release'" -ForegroundColor Red
+        exit 1
     }
 
-    # Enter release directory and commit
-    Push-Location $RELEASE_DIR
+    # Clone repository to temporary location
+    Write-Host ""
+    Write-Host "📥 Cloning $releaseName repository..." -ForegroundColor Cyan
+    git clone $releaseRepo $TEMP_CLONE 2>&1 | ForEach-Object {
+        if ($_ -match "error|fatal") {
+            Write-Host "   $_" -ForegroundColor Red
+        } else {
+            Write-Host "   $_" -ForegroundColor DarkGray
+        }
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Git clone failed with exit code $LASTEXITCODE"
+    }
+
+    # Copy files from dist/release to cloned repo (excluding .git)
+    Write-Host ""
+    Write-Host "📋 Copying release files..." -ForegroundColor Yellow
+    Get-ChildItem -Path $RELEASE_DIR -Exclude ".git" | ForEach-Object {
+        Copy-Item -Path $_.FullName -Destination $TEMP_CLONE -Recurse -Force
+        Write-Host "   ✓ $($_.Name)" -ForegroundColor DarkGray
+    }
+
+    # Enter cloned repo and commit
+    Push-Location $TEMP_CLONE
 
     # Check for changes
     Write-Host ""
@@ -107,37 +130,51 @@ try {
         git add -A
         git commit -m $commitMessage
         Write-Host "   ✅ Committed: $commitMessage" -ForegroundColor Green
-    }
-    else {
-        Write-Host "   No changes to commit" -ForegroundColor Gray
-    }
 
-    # Push to origin
-    Write-Host ""
-    Write-Host "📤 Pushing to $releaseName repository..." -ForegroundColor Cyan
-    git push -u origin main 2>&1 | ForEach-Object {
-        if ($_ -match "error|fatal") {
-            Write-Host "   $_" -ForegroundColor Red
-        } else {
-            Write-Host "   $_" -ForegroundColor Gray
+        # Push to origin
+        Write-Host ""
+        Write-Host "📤 Pushing to $releaseName repository..." -ForegroundColor Cyan
+        git push origin main 2>&1 | ForEach-Object {
+            if ($_ -match "error|fatal") {
+                Write-Host "   $_" -ForegroundColor Red
+            } else {
+                Write-Host "   $_" -ForegroundColor Gray
+            }
         }
-    }
 
-    if ($LASTEXITCODE -eq 0) {
+        if ($LASTEXITCODE -ne 0) {
+            throw "Git push failed with exit code $LASTEXITCODE"
+        }
+
         Write-Host ""
         Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
         Write-Host "✅ Release pushed successfully to $releaseName" -ForegroundColor Green
         Write-Host ""
-    } else {
-        throw "Git push failed with exit code $LASTEXITCODE"
+    }
+    else {
+        Write-Host "   No changes to push" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+        Write-Host "✅ Repository already up to date" -ForegroundColor Green
+        Write-Host ""
     }
 
     Pop-Location
+
+    # Cleanup temporary clone
+    Write-Host "🧹 Cleaning up..." -ForegroundColor DarkGray
+    Remove-Item -Recurse -Force $TEMP_CLONE
 }
 catch {
     Write-Host ""
     Write-Host "❌ Error: $_" -ForegroundColor Red
     Write-Host ""
     Pop-Location -ErrorAction SilentlyContinue
+
+    # Cleanup on error
+    if (Test-Path $TEMP_CLONE) {
+        Remove-Item -Recurse -Force $TEMP_CLONE -ErrorAction SilentlyContinue
+    }
+
     exit 1
 }
