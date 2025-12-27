@@ -93,14 +93,14 @@ if ((Split-Path $_scriptDir -Leaf) -eq 'scripts') {
 } else {
     $script:BaseDir = $_scriptDir
 }
-$script:SetupDir = Join-Path $BaseDir ".setup"
-$script:SetupCommand = $Command
+$script:BoxDir = Join-Path $BaseDir ".box"
+$script:BoxCommand = $Command
 
 # ============================================================================
 # Initialize (loads configs, functions, and derived paths)
 # ============================================================================
 
-$_initPath = Join-Path $SetupDir "inc\\init.ps1"
+$_initPath = Join-Path $BoxDir "inc\\init.ps1"
 if (-not (Test-Path $_initPath)) {
     Write-Err "init.ps1 not found: $_initPath"
     exit 1

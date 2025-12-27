@@ -16,7 +16,7 @@ function Invoke-Install {
     Write-Host "========================================" -ForegroundColor Magenta
 
     # Run install script if exists
-    $installScript = Join-Path $SetupDir "install.ps1"
+    $installScript = Join-Path $BoxDir "install.ps1"
     if (Test-Path $installScript) {
         & $installScript
     } else {
@@ -48,7 +48,7 @@ function Invoke-Uninstall {
     Write-Host "  Uninstall Environment" -ForegroundColor Yellow
     Write-Host "========================================" -ForegroundColor Yellow
 
-    $uninstallScript = Join-Path $SetupDir "uninstall.ps1"
+    $uninstallScript = Join-Path $BoxDir "uninstall.ps1"
     if (Test-Path $uninstallScript) {
         & $uninstallScript
     } else {

@@ -1,8 +1,8 @@
 # ============================================================================
 # AmigaDevBox - Initialization Module
 # ============================================================================
-# This file handles all setup initialization: paths, configs, and functions.
-# Dot-source this from setup.ps1 to keep the main script clean.
+# This file handles all box initialization: paths, configs, and functions.
+# Dot-source this from box.ps1 to keep the main script clean.
 # ============================================================================
 
 # ============================================================================
@@ -10,12 +10,12 @@
 # ============================================================================
 
 $CONFIG_FILENAME = 'config.psd1'
-$USER_CONFIG_FILENAME = 'setup.config.psd1'
-$STATE_FILENAME = '.setup/state.json'
+$USER_CONFIG_FILENAME = 'box.config.psd1'
+$STATE_FILENAME = '.box/state.json'
 $FUNCTIONS_LOADER = 'inc\functions.ps1'
 
 # ============================================================================
-# Derived Paths (BaseDir and SetupDir are set by caller)
+# Derived Paths (BaseDir and BoxDir are set by caller)
 # ============================================================================
 
 $script:StateFile = Join-Path $BaseDir $STATE_FILENAME
@@ -25,7 +25,7 @@ $script:EnvFile = Join-Path $BaseDir ".env"
 # Load Functions (before config loading - needed for Merge-Config)
 # ============================================================================
 
-$script:FunctionsLoader = Join-Path $SetupDir $FUNCTIONS_LOADER
+$script:FunctionsLoader = Join-Path $BoxDir $FUNCTIONS_LOADER
 if (-not (Test-Path $FunctionsLoader)) {
     Write-Host "Functions loader not found: $FunctionsLoader" -ForegroundColor Red
     exit 1
@@ -37,9 +37,9 @@ if (-not (Test-Path $FunctionsLoader)) {
 # ============================================================================
 
 # Load system config
-$script:SysConfigFile = Join-Path $SetupDir $CONFIG_FILENAME
+$script:SysConfigFile = Join-Path $BoxDir $CONFIG_FILENAME
 if (-not (Test-Path $SysConfigFile)) {
-    Write-Host "$CONFIG_FILENAME not found in .setup/" -ForegroundColor Red
+    Write-Host "$CONFIG_FILENAME not found in .box/" -ForegroundColor Red
     exit 1
 }
 $script:SysConfig = Import-PowerShellDataFile $SysConfigFile
@@ -53,11 +53,11 @@ $script:SkipExecution = $false
 $script:StateExists = Test-Path (Join-Path $BaseDir $STATE_FILENAME)
 
 # Commands that require state (not install, not help)
-if ($SetupCommand -in @("uninstall", "env", "pkg")) {
+if ($BoxCommand -in @("uninstall", "env", "pkg")) {
     if (-not $StateExists) {
         Write-Host ""
         Write-Host "No configuration found." -ForegroundColor Red
-        Write-Host "Run 'setup' or 'setup install' first." -ForegroundColor Gray
+        Write-Host "Run 'box' or 'box install' first." -ForegroundColor Gray
         Write-Host ""
         $script:SkipExecution = $true
     }
@@ -69,7 +69,7 @@ if (-not $SkipExecution) {
         $script:UserConfig = Import-PowerShellDataFile $UserConfigFile
         $script:Config = Merge-Config -SysConfig $SysConfig -UserConfig $UserConfig
     }
-    elseif ($SetupCommand -eq "install" -or $SetupCommand -eq "") {
+    elseif ($BoxCommand -eq "install" -or $BoxCommand -eq "") {
         # install: will run wizard later in Invoke-Install
         $script:UserConfig = @{}
         $script:Config = $SysConfig
@@ -91,15 +91,15 @@ $script:CacheDir = if ($Config.CachePath) {
     if ([System.IO.Path]::IsPathRooted($Config.CachePath)) { $Config.CachePath } 
     else { Join-Path $BaseDir $Config.CachePath }
 } else { 
-    Join-Path $BaseDir $Config.SetupPaths.Cache 
+    Join-Path $BaseDir $Config.BoxPaths.Cache 
 }
 $script:DownloadsDir = $CacheDir
 $script:TempDir = Join-Path $CacheDir "temp"
-$script:SetupToolsDir = Join-Path $BaseDir $Config.SetupPaths.Tools
+$script:BoxToolsDir = Join-Path $BaseDir $Config.BoxPaths.Tools
 
 # 7-Zip paths
-$script:SevenZipExe = Join-Path $SetupToolsDir "7z.exe"
-$script:SevenZipDll = Join-Path $SetupToolsDir "7z.dll"
+$script:SevenZipExe = Join-Path $BoxToolsDir "7z.exe"
+$script:SevenZipDll = Join-Path $BoxToolsDir "7z.dll"
 
 # All packages (merged - UserConfig.Packages first for priority)
 $script:AllPackages = if ($Config.Packages) { $Config.Packages } else { @() }

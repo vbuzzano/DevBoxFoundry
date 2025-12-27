@@ -4,7 +4,7 @@
 
 function Show-Help {
     Write-Host ""
-    Write-Host "Usage: setup.ps1 [command] [subcommand]" -ForegroundColor Cyan
+    Write-Host "Usage: box [command] [subcommand]" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Yellow
     Write-Host "  install          Install all dependencies (default)" -ForegroundColor White

@@ -2,7 +2,7 @@
 # AmigaDevBox - System Configuration (DO NOT MODIFY)
 # ============================================================================
 # This file contains system settings that should not be modified by users.
-# For user customization, edit setup.config.psd1 in the project root.
+# For user customization, edit box.config.psd1 in the project root.
 # ============================================================================
 
 @{
@@ -18,20 +18,20 @@
     # ========================================================================
     # Makefile Template
     # ========================================================================
-    MakefileTemplate = ".setup/template/Makefile.template"
+    MakefileTemplate = ".box/template/Makefile.template"
 
     # ========================================================================
-    # Setup Internal Paths
+    # Box Internal Paths
     # ========================================================================
-    SetupPaths = @{
-        Cache        = ".setup/cache"      # Downloads and temp files
-        Tools        = ".setup/tools"      # Setup tools (7z, acp, gdb)
+    BoxPaths = @{
+        Cache        = ".box/cache"      # Downloads and temp files
+        Tools        = ".box/tools"      # Box tools (7z, acp, gdb)
     }
 
     # ========================================================================
     # User Config Template
     # ========================================================================
-    UserConfigTemplate = ".setup/template/setup.config.template"
+    UserConfigTemplate = ".box/template/box.config.template"
 
     # ========================================================================
     # Project Structure Paths (used in Makefile.env)
@@ -45,9 +45,9 @@
         DistDir      = "dist"
         VendorDir    = "vendor"
 
-        # Tools (in .setup/tools)
-        ACP          = "./.setup/tools/acp.exe"
-        GDB          = "./.setup/tools/bgdbserver"
+        # Tools (in .box/tools)
+        ACP          = "./.box/tools/acp.exe"
+        GDB          = "./.box/tools/bgdbserver"
     }
 
     # ========================================================================

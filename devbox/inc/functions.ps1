@@ -1,14 +1,14 @@
 # ============================================================================
-# AmigaDevBox - Setup Functions Loader
+# AmigaDevBox - Box Functions Loader
 # ============================================================================
 # This file loads all modular function files
 # DO NOT MODIFY - changes will be overwritten on updates
 # ============================================================================
 
-# Determine inc directory. Prefer $SetupDir if provided by the caller,
+# Determine inc directory. Prefer $BoxDir if provided by the caller,
 # otherwise fall back to script location.
-if ($SetupDir) {
-    $script:IncDir = Join-Path $SetupDir "inc"
+if ($BoxDir) {
+    $script:IncDir = Join-Path $BoxDir "inc"
 } else {
     $script:IncDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 }

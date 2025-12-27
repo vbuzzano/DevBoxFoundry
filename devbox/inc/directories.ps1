@@ -4,7 +4,7 @@
 
 function Create-Directories {
     Write-Step "Creating project directories"
-    
+
     foreach ($dir in $Config.Directories) {
         $fullPath = Join-Path $BaseDir $dir
         if (-not (Test-Path $fullPath)) {
@@ -12,7 +12,7 @@ function Create-Directories {
             Write-Info "Created: $dir/"
         }
     }
-    
+
     Write-Success "Directories ready"
 }
 
@@ -25,16 +25,16 @@ function Cleanup-Temp {
 
 function Do-Uninstall {
     Write-Step "Removing installed packages and generated files"
-    
+
     $state = Load-State
     $removedCount = 0
-    
+
     # Remove installed packages (files and dirs tracked in state)
     foreach ($pkgName in @($state.packages.Keys)) {
         $pkgState = $state.packages[$pkgName]
         if ($pkgState.installed) {
             Write-Info "Removing $pkgName..."
-            
+
             # First remove files
             if ($pkgState.files) {
                 foreach ($file in $pkgState.files) {
@@ -44,14 +44,14 @@ function Do-Uninstall {
                     }
                 }
             }
-            
+
             # Then remove created directories (if empty)
             if ($pkgState.dirs) {
                 foreach ($dir in $pkgState.dirs) {
                     Remove-DirectoryIfEmpty -Path $dir
                 }
             }
-            
+
             # Clean empty parent directories (bottom-up from files)
             if ($pkgState.files) {
                 foreach ($file in $pkgState.files) {
@@ -62,7 +62,7 @@ function Do-Uninstall {
         }
         Remove-PackageState $pkgName
     }
-    
+
     # Remove generated env files
     @(".env", ".env.custom") | ForEach-Object {
         $path = Join-Path $BaseDir $_
@@ -72,9 +72,9 @@ function Do-Uninstall {
             $removedCount++
         }
     }
-    
-    # Remove .setup internal directories (cache, tools)
-    @(".setup/cache", ".setup/tools") | ForEach-Object {
+
+    # Remove .box internal directories (cache, tools)
+    @(".box/cache", ".box/tools") | ForEach-Object {
         $path = Join-Path $BaseDir $_
         if (Test-Path $path) {
             Remove-Item $path -Recurse -Force
@@ -82,7 +82,7 @@ function Do-Uninstall {
             $removedCount++
         }
     }
-    
+
     # Always remove build and dist directories
     @("build", "dist") | ForEach-Object {
         $path = Join-Path $BaseDir $_
@@ -92,18 +92,18 @@ function Do-Uninstall {
             $removedCount++
         }
     }
-    
+
     # Remove state file last
-    $statePath = Join-Path $BaseDir ".setup/state.json"
+    $statePath = Join-Path $BaseDir ".box/state.json"
     if (Test-Path $statePath) {
         Remove-Item $statePath -Force
-        Write-Info "Removed .setup/state.json"
+        Write-Info "Removed .box/state.json"
     }
-    
+
     if ($removedCount -eq 0) {
         Write-Info "Nothing to remove"
     }
-    
+
     Write-Success "Uninstall complete"
     Write-Host ""
 }
@@ -111,7 +111,7 @@ function Do-Uninstall {
 # Remove a directory only if it's empty
 function Remove-DirectoryIfEmpty {
     param([string]$Path)
-    
+
     if (Test-Path $Path) {
         $items = Get-ChildItem $Path -Force -ErrorAction SilentlyContinue
         if ($items.Count -eq 0) {
@@ -123,7 +123,7 @@ function Remove-DirectoryIfEmpty {
 # Remove empty parent directories up to BaseDir
 function Remove-EmptyParents {
     param([string]$Path)
-    
+
     while ($Path -and $Path -ne $BaseDir -and (Test-Path $Path)) {
         $items = Get-ChildItem $Path -Force -ErrorAction SilentlyContinue
         if ($items.Count -eq 0) {
