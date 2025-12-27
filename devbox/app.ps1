@@ -27,7 +27,7 @@
 param(
     [Parameter(Position = 0)]
     [ValidateSet("install", "uninstall", "env", "pkg", "template", "help", "")]
-    [string]$Command = "install",
+    [string]$Command = "help",
 
     [Parameter(Position = 1)]
     [string]$SubCommand = "",
@@ -88,12 +88,21 @@ if ($Help -or $Command -eq "help") {
 # ============================================================================
 
 $_scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-if ((Split-Path $_scriptDir -Leaf) -eq 'scripts') {
+$_scriptDirName = Split-Path $_scriptDir -Leaf
+
+if ($_scriptDirName -eq '.box') {
+    # Running from .box/box.ps1 - BaseDir is parent of .box
     $script:BaseDir = Split-Path -Parent $_scriptDir
+    $script:BoxDir = $_scriptDir
+} elseif ($_scriptDirName -eq 'scripts') {
+    # Running from scripts/ (development mode)
+    $script:BaseDir = Split-Path -Parent $_scriptDir
+    $script:BoxDir = Join-Path $BaseDir ".box"
 } else {
+    # Running from project root or other location
     $script:BaseDir = $_scriptDir
+    $script:BoxDir = Join-Path $BaseDir ".box"
 }
-$script:BoxDir = Join-Path $BaseDir ".box"
 $script:BoxCommand = $Command
 
 # ============================================================================
