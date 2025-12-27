@@ -24,7 +24,7 @@
       devbox add [in existing directory]
 
     Remote installation:
-      irm https://github.com/vbuzzano/DevBoxFoundry/raw/main/devbox.ps1 | iex
+      irm https://github.com/vbuzzano/AmiDevBox/raw/main/devbox.ps1 | iex
 
 .PARAMETER Mode
     Operation mode: 'init' or 'add'. Auto-detected if not specified.
@@ -40,7 +40,7 @@
 
 .EXAMPLE
     # Global installation (first time)
-    irm https://github.com/vbuzzano/DevBoxFoundry/raw/main/devbox.ps1 | iex
+    irm https://github.com/vbuzzano/AmiDevBox/raw/main/devbox.ps1 | iex
 
 .EXAMPLE
     # After installation: Create new project
@@ -105,11 +105,40 @@ if (Test-Path $PROFILE.CurrentUserAllHosts -ErrorAction SilentlyContinue) {
 
 $Script:Config = @{
     Version = '0.1.0'
-    RepositoryUrl = 'https://github.com/vbuzzano/DevBoxFoundry.git'
+    RepositoryUrl = 'https://github.com/vbuzzano/AmiDevBox.git'
     BoxDir = '.box'
     ConfigFile = 'box.config.psd1'
     EnvFile = '.env'
 }
+
+# ============================================================================
+# EMBEDDED FALLBACK CONTENT
+# ============================================================================
+
+# Embedded .env.ps1 content (fallback if download fails)
+$Script:EmbeddedEnvPs = @'
+# Load environment variables from .env file
+# This script loads KEY=VALUE pairs from .env into the current PowerShell session
+# Source it in your scripts or profiles to populate environment variables
+
+if (Test-Path ".env") {
+    Get-Content ".env" | ForEach-Object {
+        # Skip comments and empty lines
+        if ($_ -match '^\s*#' -or $_ -match '^\s*$') {
+            return
+        }
+        
+        # Parse KEY=VALUE
+        if ($_ -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+            $key = $matches[1]
+            $value = $matches[2].Trim()
+            
+            # Set environment variable
+            [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+        }
+    }
+}
+'@
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -289,8 +318,14 @@ function Initialize-NewProject {
             else {
                 # Remote download (also used when run via irm | iex)
                 $ProgressPreference = 'SilentlyContinue'
-                Invoke-RestMethod -Uri $BoxUrl -OutFile $BoxDest -ErrorAction Stop
-                Write-Success 'Downloaded: box.ps1 to .box/'
+                $response = Invoke-WebRequest -Uri $BoxUrl -ErrorAction Stop
+                if ($response.StatusCode -eq 200) {
+                    Set-Content -Path $BoxDest -Value $response.Content -Encoding UTF8
+                    Write-Success 'Downloaded: box.ps1 to .box/'
+                }
+                else {
+                    throw "HTTP $($response.StatusCode)"
+                }
             }
 
             if (-not (Test-Path $BoxDest)) {
@@ -318,8 +353,14 @@ function Initialize-NewProject {
             else {
                 # Remote download (also used when run via irm | iex)
                 $ProgressPreference = 'SilentlyContinue'
-                Invoke-RestMethod -Uri $ConfigUrl -OutFile $ConfigDest -ErrorAction Stop
-                Write-Success 'Downloaded: config.psd1 to .box/'
+                $response = Invoke-WebRequest -Uri $ConfigUrl -ErrorAction Stop
+                if ($response.StatusCode -eq 200) {
+                    Set-Content -Path $ConfigDest -Value $response.Content -Encoding UTF8
+                    Write-Success 'Downloaded: config.psd1 to .box/'
+                }
+                else {
+                    throw "HTTP $($response.StatusCode)"
+                }
             }
 
             if (-not (Test-Path $ConfigDest)) {
@@ -329,6 +370,47 @@ function Initialize-NewProject {
         catch {
             Write-Error-Custom "Setup failed: $_"
             throw
+        }
+
+        # Download/copy tpl/.env.ps1 from release
+        Write-Step 'Downloading .env.ps1 template'
+        try {
+            $TplPath = Join-Path $BoxPath 'tpl'
+            New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
+
+            $EnvPsUrl = 'https://github.com/vbuzzano/AmiDevBox/raw/main/tpl/.env.ps1'
+            $EnvPsDest = Join-Path $TplPath '.env.ps1'
+
+            # Try local copy first (for development), then remote download
+            $LocalTplPath = Join-Path (Split-Path -Parent $PSCommandPath) 'tpl'
+            $LocalEnvPsPath = Join-Path $LocalTplPath '.env.ps1'
+
+            if ($PSCommandPath -and (Test-Path $LocalEnvPsPath)) {
+                Copy-Item $LocalEnvPsPath $EnvPsDest -Force
+                Write-Success 'Copied: tpl/.env.ps1 to .box/'
+            }
+            else {
+                # Remote download (also used when run via irm | iex)
+                $ProgressPreference = 'SilentlyContinue'
+                $response = Invoke-WebRequest -Uri $EnvPsUrl -ErrorAction Stop
+                if ($response.StatusCode -eq 200) {
+                    Set-Content -Path $EnvPsDest -Value $response.Content -Encoding UTF8
+                    Write-Success 'Downloaded: tpl/.env.ps1 to .box/'
+                }
+                else {
+                    throw "HTTP $($response.StatusCode)"
+                }
+            }
+        }
+        catch {
+            Write-Warning "Could not download .env.ps1 template: $_"
+            Write-Warning "Using embedded fallback content"
+            # Use embedded fallback
+            $TplPath = Join-Path $BoxPath 'tpl'
+            New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
+            $EnvPsDest = Join-Path $TplPath '.env.ps1'
+            Set-Content -Path $EnvPsDest -Value $Script:EmbeddedEnvPs -Encoding UTF8
+            Write-Success 'Created: tpl/.env.ps1 from embedded fallback'
         }
 
         # Generate box.config.psd1
@@ -367,6 +449,16 @@ DefaultFPU=
         Set-Content -Path $EnvPath -Value $EnvContent -Encoding UTF8
         Track-Creation $EnvPath 'file'
         Write-Success 'Created: .env'
+
+        # Copy .env.ps1 loader script
+        Write-Step 'Creating PowerShell env loader'
+        $EnvPsPath = Join-Path $TargetDir '.env.ps1'
+        $EnvPsTemplate = Join-Path $BoxPath 'tpl\.env.ps1'
+        if (Test-Path $EnvPsTemplate) {
+            Copy-Item $EnvPsTemplate $EnvPsPath -Force
+            Track-Creation $EnvPsPath 'file'
+            Write-Success 'Created: .env.ps1'
+        }
 
         # Create directories
         Write-Step 'Creating project structure'
@@ -407,25 +499,22 @@ See **.box/** directory for build system documentation.
         Track-Creation $ReadmePath 'file'
         Write-Success 'Generated: README.md'
 
-        # VS Code integration (optional)
-        if ($VSCode) {
-            Write-Step 'Configuring VS Code'
-            $VSCodeDir = Join-Path $TargetDir '.vscode'
-            New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
-            Track-Creation $VSCodeDir 'directory'
+        # VS Code integration (always create in init mode)
+        Write-Step 'Configuring VS Code'
+        $VSCodeDir = Join-Path $TargetDir '.vscode'
+        New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
+        Track-Creation $VSCodeDir 'directory'
 
-            $SettingsPath = Join-Path $VSCodeDir 'settings.json'
-            $SettingsContent = @"
+        $SettingsPath = Join-Path $VSCodeDir 'settings.json'
+        $SettingsContent = @"
 {
-  "terminal.integrated.env.windows": {
-    "DEVBOX_ENV": ".env"
+  "terminal.integrated.profiles.windows": {
+    "DevBox PowerShell": {
+      "source": "PowerShell",
+      "args": ["-NoExit", "-Command", ". ./.env.ps1"]
+    }
   },
-  "terminal.integrated.env.linux": {
-    "DEVBOX_ENV": ".env"
-  },
-  "terminal.integrated.env.osx": {
-    "DEVBOX_ENV": ".env"
-  },
+  "terminal.integrated.defaultProfile.windows": "DevBox PowerShell",
   "powershell.codeFormatting.preset": "OTBS",
   "[powershell]": {
     "editor.defaultFormatter": "ms-vscode.powershell",
@@ -433,10 +522,9 @@ See **.box/** directory for build system documentation.
   }
 }
 "@
-            Set-Content -Path $SettingsPath -Value $SettingsContent -Encoding UTF8
-            Track-Creation $SettingsPath 'file'
-            Write-Success 'Created: .vscode/settings.json'
-        }
+        Set-Content -Path $SettingsPath -Value $SettingsContent -Encoding UTF8
+        Track-Creation $SettingsPath 'file'
+        Write-Success 'Created: .vscode/settings.json'
 
         # Copy box.ps1 to project root
         Write-Step 'Setting up box.ps1'
@@ -493,24 +581,27 @@ function Add-ToExistingProject {
             # Download/copy box.ps1
             Write-Step 'Downloading box.ps1'
             try {
-                $BoxUrl = 'https://github.com/vbuzzano/DevBoxFoundry/raw/main/dist/box.ps1'
+                $BoxUrl = 'https://github.com/vbuzzano/AmiDevBox/raw/main/box.ps1'
                 $BoxDest = Join-Path $BoxDir 'box.ps1'
 
                 # Try local copy first (for development), then remote download
-                $LocalBoxPath = Join-Path (Split-Path $Script:MyInvocation.MyCommand.Path) 'box.ps1'
-                if (-not (Test-Path $LocalBoxPath)) {
-                    $LocalBoxPath = 'box.ps1'
-                }
+                $LocalBoxPath = Join-Path (Split-Path -Parent $PSCommandPath) 'box.ps1'
 
-                if (Test-Path $LocalBoxPath) {
+                if ($PSCommandPath -and (Test-Path $LocalBoxPath)) {
                     Copy-Item $LocalBoxPath $BoxDest -Force
                     Write-Success 'Copied: box.ps1 to .box/'
                 }
                 else {
-                    # Fallback to remote download
+                    # Remote download (also used when run via irm | iex)
                     $ProgressPreference = 'SilentlyContinue'
-                    Invoke-RestMethod -Uri $BoxUrl -OutFile $BoxDest -ErrorAction Stop
-                    Write-Success 'Downloaded: box.ps1 to .box/'
+                    $response = Invoke-WebRequest -Uri $BoxUrl -ErrorAction Stop
+                    if ($response.StatusCode -eq 200) {
+                        Set-Content -Path $BoxDest -Value $response.Content -Encoding UTF8
+                        Write-Success 'Downloaded: box.ps1 to .box/'
+                    }
+                    else {
+                        throw "HTTP $($response.StatusCode)"
+                    }
                 }
 
                 if (-not (Test-Path $BoxDest)) {
@@ -520,6 +611,41 @@ function Add-ToExistingProject {
             catch {
                 Write-Error-Custom "Setup failed: $_"
                 throw
+            }
+
+            # Download/copy tpl/.env.ps1 from release
+            Write-Step 'Downloading .env.ps1 template'
+            try {
+                $TplPath = Join-Path $BoxDir 'tpl'
+                New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
+
+                $EnvPsUrl = 'https://github.com/vbuzzano/AmiDevBox/raw/main/tpl/.env.ps1'
+                $EnvPsDest = Join-Path $TplPath '.env.ps1'
+
+                # Try local copy first (for development), then remote download
+                $LocalTplPath = Join-Path (Split-Path -Parent $PSCommandPath) 'tpl'
+                $LocalEnvPsPath = Join-Path $LocalTplPath '.env.ps1'
+
+                if ($PSCommandPath -and (Test-Path $LocalEnvPsPath)) {
+                    Copy-Item $LocalEnvPsPath $EnvPsDest -Force
+                    Write-Success 'Copied: tpl/.env.ps1 to .box/'
+                }
+                else {
+                    # Remote download (also used when run via irm | iex)
+                    $ProgressPreference = 'SilentlyContinue'
+                    $response = Invoke-WebRequest -Uri $EnvPsUrl -ErrorAction Stop
+                    if ($response.StatusCode -eq 200) {
+                        Set-Content -Path $EnvPsDest -Value $response.Content -Encoding UTF8
+                        Write-Success 'Downloaded: tpl/.env.ps1 to .box/'
+                    }
+                    else {
+                        throw "HTTP $($response.StatusCode)"
+                    }
+                }
+            }
+            catch {
+                Write-Warning "Could not download .env.ps1 template: $_"
+                # Non-critical, continue
             }
         }
 
@@ -568,6 +694,18 @@ DefaultFPU=
             Write-Success "Backup: $([System.IO.Path]::GetFileName($BackupPath))"
         }
 
+        # Copy .env.ps1 loader script
+        $EnvPsPath = Join-Path $CurrentDir '.env.ps1'
+        if (-not (Test-Path $EnvPsPath)) {
+            Write-Step 'Creating PowerShell env loader'
+            $EnvPsTemplate = Join-Path $BoxDir 'tpl\.env.ps1'
+            if (Test-Path $EnvPsTemplate) {
+                Copy-Item $EnvPsTemplate $EnvPsPath -Force
+                Track-Creation $EnvPsPath 'file'
+                Write-Success 'Created: .env.ps1'
+            }
+        }
+
         # Backup existing critical files ONLY if they will be overwritten
         # Currently, we only keep .env backup since others are skipped or created fresh
         # This preserves user data when adding DevBox to existing projects
@@ -592,27 +730,27 @@ DefaultFPU=
             Write-Host "  ⚠️ box.ps1 not found in .box/" -ForegroundColor Yellow
         }
 
-        # VS Code integration (optional)
-        Write-Host ''
-        $VSCodeAnswer = Read-Host 'Configure VS Code integration? [y/n]'
-        if ($VSCodeAnswer -eq 'y' -or $VSCodeAnswer -eq 'yes') {
-            Write-Step 'Configuring VS Code'
-            $VSCodeDir = Join-Path $CurrentDir '.vscode'
-            New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
-            Track-Creation $VSCodeDir 'directory'
+        # VS Code integration (ask if not already configured)
+        $VSCodeDir = Join-Path $CurrentDir '.vscode'
+        $SettingsPath = Join-Path $VSCodeDir 'settings.json'
 
-            $SettingsPath = Join-Path $VSCodeDir 'settings.json'
-            $SettingsContent = @"
+        if (-not (Test-Path $SettingsPath)) {
+            Write-Host ''
+            $VSCodeAnswer = Read-Host 'Configure VS Code integration? [y/n]'
+            if ($VSCodeAnswer -eq 'y' -or $VSCodeAnswer -eq 'yes') {
+                Write-Step 'Configuring VS Code'
+                New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
+                Track-Creation $VSCodeDir 'directory'
+
+                $SettingsContent = @"
 {
-  "terminal.integrated.env.windows": {
-    "DEVBOX_ENV": ".env"
+  "terminal.integrated.profiles.windows": {
+    "DevBox PowerShell": {
+      "source": "PowerShell",
+      "args": ["-NoExit", "-Command", ". ./.env.ps1"]
+    }
   },
-  "terminal.integrated.env.linux": {
-    "DEVBOX_ENV": ".env"
-  },
-  "terminal.integrated.env.osx": {
-    "DEVBOX_ENV": ".env"
-  },
+  "terminal.integrated.defaultProfile.windows": "DevBox PowerShell",
   "powershell.codeFormatting.preset": "OTBS",
   "[powershell]": {
     "editor.defaultFormatter": "ms-vscode.powershell",
@@ -620,9 +758,10 @@ DefaultFPU=
   }
 }
 "@
-            Set-Content -Path $SettingsPath -Value $SettingsContent -Encoding UTF8
-            Track-Creation $SettingsPath 'file'
-            Write-Success 'Created: .vscode/settings.json'
+                Set-Content -Path $SettingsPath -Value $SettingsContent -Encoding UTF8
+                Track-Creation $SettingsPath 'file'
+                Write-Success 'Created: .vscode/settings.json'
+            }
         }
 
         Write-Title 'DevBox Added Successfully'
