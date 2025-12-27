@@ -73,6 +73,28 @@ Copy-Item -Force "dist\devbox.ps1" "$ReleaseDir\devbox.ps1"
 Write-Host "   config.psd1 (system configuration)..." -ForegroundColor Gray
 Copy-Item -Force "$DevBoxDir\config.psd1" "$ReleaseDir\config.psd1"
 
+Write-Host "   tpl/ (templates directory)..." -ForegroundColor Gray
+if (Test-Path "$DevBoxDir\tpl") {
+    # Copy entire tpl/ directory, excluding .vscode
+    $TplSource = Join-Path $DevBoxDir "tpl"
+    $TplDest = Join-Path $ReleaseDir "tpl"
+    
+    # Copy recursively, then remove .vscode if present
+    Copy-Item -Path $TplSource -Destination $TplDest -Recurse -Force
+    
+    # Remove .vscode subdirectories if any
+    Get-ChildItem -Path $TplDest -Recurse -Directory -Filter ".vscode" | Remove-Item -Recurse -Force
+    
+    # Verify critical templates exist
+    $criticalTemplates = @(".env.ps1", "Makefile.template", "Makefile.amiga.template")
+    foreach ($template in $criticalTemplates) {
+        $templatePath = Join-Path $TplDest $template
+        if (-not (Test-Path $templatePath)) {
+            throw "Release build failed: $template not found in tpl/"
+        }
+    }
+}
+
 # Copy root files
 Write-Host ""
 Write-Host "📄 Copying documentation and metadata..." -ForegroundColor Yellow
