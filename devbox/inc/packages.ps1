@@ -371,17 +371,6 @@ function Process-Package {
     Set-PackageState -Name $name -Installed $true -Files $result.Files -Dirs $result.Dirs -Envs $result.Envs
     Write-Success "Installed"
 }
-    }
-
-    if ($Item.Archive -eq "file") {
-        $result = Install-SingleFile -FilePath $archive -Name $name -ExtractRules $Item.Extract
-    } else {
-        $result = Extract-Package -Archive $archive -Name $name -ArchiveType $Item.Archive -ExtractRules $Item.Extract
-    }
-
-    Set-PackageState -Name $name -Installed $true -Files $result.Files -Dirs $result.Dirs -Envs $result.Envs
-    Write-Success "Installed"
-}
 
 function Show-PackageList {
     Write-Host ""
