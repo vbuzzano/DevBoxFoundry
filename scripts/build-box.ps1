@@ -117,6 +117,9 @@ if ($initStartIndex -ge 0 -and $initEndIndex -ge 0) {
         # Clean dot-source commands (US4: Clean Output)
         $content = $content -replace '(?m)^\s*\.\s+"?\$script:IncDir\\[^"]+\.ps1"?\s*$', ''
 
+        # Remove functions.ps1 loading block from init.ps1 (already compiled in)
+        $content = $content -replace '(?ms)^\$script:FunctionsLoader = Join-Path.*?\. \$FunctionsLoader\s*$', ''
+
         # Add source mapping (US2: Source Mapping)
         $compiledContent += "# ──────────────────────────────────────────────────────────────────────────────"
         $compiledContent += "# Source: inc/$($module.Name)"
