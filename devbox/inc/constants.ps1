@@ -10,7 +10,7 @@
 # Common filenames (can be referenced by other scripts)
 $script:ConfigFileName = 'config.psd1'
 $script:UserConfigFileName = 'box.config.psd1'
-$script:MakefileTemplateName = '.box/template/Makefile.template'
+$script:MakefileTemplateName = '.box/tpl/Makefile.template'
 
 function Get-IncPath {
     param([string]$Name)

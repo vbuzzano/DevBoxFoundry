@@ -34,7 +34,7 @@ Write-Host "[Test] Download URL validation..." -ForegroundColor Yellow
 Write-Host ""
 
 # Test 2: Verify download URL is accessible (would need actual GitHub push)
-$expectedUrl = "https://github.com/vbuzzano/DevBoxFoundry/raw/main/dist/devbox.ps1"
+$expectedUrl = "https://github.com/vbuzzano/AmiDevBox/raw/main/devbox.ps1"
 Write-Host "  Expected URL: $expectedUrl" -ForegroundColor Cyan
 
 # Test 3: Verify local dist/devbox.ps1 exists
@@ -63,7 +63,7 @@ Write-Host "✅ Pre-flight checks passed" -ForegroundColor Green
 Write-Host ""
 Write-Host "⚠️  To test actual remote installation:" -ForegroundColor Yellow
 Write-Host "   1. Commit and push changes to GitHub" -ForegroundColor White
-Write-Host "   2. Run: irm https://github.com/vbuzzano/DevBoxFoundry/raw/main/dist/devbox.ps1 | iex" -ForegroundColor White
+Write-Host "   2. Run: irm https://github.com/vbuzzano/AmiDevBox/raw/main/devbox.ps1 | iex" -ForegroundColor White
 Write-Host "   3. Verify installation completes successfully" -ForegroundColor White
 Write-Host ""
 

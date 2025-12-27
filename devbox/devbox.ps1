@@ -413,22 +413,17 @@ function Initialize-NewProject {
             Write-Success 'Created: tpl/.env.ps1 from embedded fallback'
         }
 
-        # Generate box.config.psd1
-        Write-Step 'Generating configuration file'
-        $ConfigPath = Join-Path $TargetDir $Script:Config.ConfigFile
-        $TemplateConfig = @"
-@{
-    Name = '$ProjectName'
-    Description = '$Description'
-    ProgramName = '$SafeName'
-    Version = '0.1.0'
-    DefaultCPU = 'm68020'
-    DefaultFPU = ''
-}
-"@
-        Set-Content -Path $ConfigPath -Value $TemplateConfig -Encoding UTF8
-        Track-Creation $ConfigPath 'file'
-        Write-Success "Generated: box.config.psd1"
+        # Copy all templates from devbox/tpl/ to .box/tpl/
+        Write-Step 'Copying templates'
+        $SourceTplPath = Join-Path (Split-Path -Parent $PSCommandPath) 'tpl'
+        if ($PSCommandPath -and (Test-Path $SourceTplPath)) {
+            # Copy all template files
+            Get-ChildItem -Path $SourceTplPath -File | ForEach-Object {
+                $destPath = Join-Path $TplPath $_.Name
+                Copy-Item $_.FullName $destPath -Force
+            }
+            Write-Success "Copied: Templates to .box/tpl/"
+        }
 
         # Create .env file
         Write-Step 'Creating environment file'
@@ -439,6 +434,7 @@ function Initialize-NewProject {
 
 # Project
 PROJECT_NAME=$ProjectName
+DESCRIPTION=$Description
 PROGRAM_NAME=$SafeName
 VERSION=0.1.0
 
@@ -468,36 +464,6 @@ DefaultFPU=
             Track-Creation $DirPath 'directory'
         }
         Write-Success 'Created: src/, include/, lib/, bin/'
-
-        # Create README.md
-        Write-Step 'Generating README'
-        $ReadmePath = Join-Path $TargetDir 'README.md'
-        $ReadmeContent = @"
-# $ProjectName
-
-$Description
-
-## Project Structure
-
-- **src/**: Source code
-- **include/**: Header files
-- **lib/**: Libraries
-- **bin/**: Compiled binaries
-- **.box/**: DevBox development tools
-
-## Getting Started
-
-1. Review configuration: \`box.config.psd1\`
-2. Load environment: \`. .\.env.ps1\` (in PowerShell)
-3. Build: \`box build\` (or \`make\` if configured)
-
-## Documentation
-
-See **.box/** directory for build system documentation.
-"@
-        Set-Content -Path $ReadmePath -Value $ReadmeContent -Encoding UTF8
-        Track-Creation $ReadmePath 'file'
-        Write-Success 'Generated: README.md'
 
         # VS Code integration (always create in init mode)
         Write-Step 'Configuring VS Code'
@@ -533,6 +499,19 @@ See **.box/** directory for build system documentation.
         if (Test-Path $SourceBox) {
             Copy-Item $SourceBox $TargetBox -Force
             Write-Success 'Copied: box.ps1 to root'
+        }
+
+        # Generate files from templates using box init
+        Write-Step 'Generating files from templates'
+        Push-Location $TargetDir
+        try {
+            & .\box.ps1 init
+        }
+        catch {
+            Write-Warning "Could not run box init: $_"
+        }
+        finally {
+            Pop-Location
         }
 
         # Final success message

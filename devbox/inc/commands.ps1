@@ -138,7 +138,7 @@ function Invoke-EnvUpdate {
 
     # Verbose info
     if ($VerbosePreference -eq 'Continue') {
-        Write-Verbose "Template directory: .box/templates/"
+        Write-Verbose "Template directory: .box/tpl/"
         Write-Verbose "Variable sources: .env, box.config.psd1"
     }
 
@@ -157,10 +157,10 @@ function Invoke-EnvUpdate {
     }
 
     # Get available templates
-    $templates = Get-AvailableTemplates -TemplateDir '.box/templates'
+    $templates = Get-AvailableTemplates -TemplateDir '.box/tpl'
 
     if ($templates.Count -eq 0) {
-        Write-Host "  [INFO] No templates found in .box/templates/" -ForegroundColor Cyan
+        Write-Host "  [INFO] No templates found in .box/tpl/" -ForegroundColor Cyan
         return
     }
 
@@ -177,12 +177,12 @@ function Invoke-EnvUpdate {
         $actualTemplate = $null
 
         # Try: output_name.template (e.g., Makefile.template)
-        if (Test-Path ".box/templates/$template.template" -PathType Leaf) {
-            $actualTemplate = Get-Item ".box/templates/$template.template"
+        if (Test-Path ".box/tpl/$template.template" -PathType Leaf) {
+            $actualTemplate = Get-Item ".box/tpl/$template.template"
         }
         else {
             # Try: output_name_without_ext.template.ext (e.g., README.template.md)
-            $templateWithExt = ".box/templates/$($template -split '\.' | Select-Object -First 1).template.$($template -split '\.' | Select-Object -Last 1)"
+            $templateWithExt = ".box/tpl/$($template -split '\.' | Select-Object -First 1).template.$($template -split '\.' | Select-Object -Last 1)"
             if (Test-Path $templateWithExt -PathType Leaf) {
                 $actualTemplate = Get-Item $templateWithExt
             }
@@ -288,17 +288,17 @@ function Invoke-TemplateApply {
 
     # Normalize template name (add .template if missing)
     if (-not $Template.EndsWith('.template')) {
-        $templatePath = ".box/templates/$Template.template"
+        $templatePath = ".box/tpl/$Template.template"
         $outputPath = $Template
     }
     else {
-        $templatePath = ".box/templates/$Template"
+        $templatePath = ".box/tpl/$Template"
         $outputPath = $Template -replace '\.template$', ''
     }
 
     # Check if template exists
     if (-not (Test-Path $templatePath)) {
-        $available = Get-AvailableTemplates -TemplateDir '.box/templates'
+        $available = Get-AvailableTemplates -TemplateDir '.box/tpl'
         Write-Host "  [ERR] Template not found: $Template" -ForegroundColor Red
         Write-Host ""
         Write-Host "Available templates:" -ForegroundColor Yellow
@@ -358,4 +358,21 @@ function Invoke-TemplateApply {
     }
 
     Write-Host ""
+}
+
+function Invoke-Init {
+    <#
+    .SYNOPSIS
+        Generate missing project files from templates
+    
+    .DESCRIPTION
+        Calls Invoke-BoxInit from templates.ps1 module to generate
+        README.md, box.config.psd1, and other files from .box/tpl/ templates.
+        Only creates missing files - safe to re-run.
+    
+    .EXAMPLE
+        box init
+    #>
+    
+    Invoke-BoxInit
 }

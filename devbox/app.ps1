@@ -26,7 +26,7 @@
 
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("install", "uninstall", "env", "pkg", "template", "help", "")]
+    [ValidateSet("init", "install", "uninstall", "env", "pkg", "template", "help", "")]
     [string]$Command = "help",
 
     [Parameter(Position = 1)]
@@ -126,6 +126,9 @@ if ($SkipExecution) {
 # ============================================================================
 
 switch ($Command) {
+    "init" {
+        Invoke-Init
+    }
     "install" {
         Invoke-Install
     }
