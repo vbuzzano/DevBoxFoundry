@@ -19,7 +19,7 @@
     # ========================================================================
     # Custom Environment Variables (added to .env)
     # ========================================================================
-    # These variables are automatically exported when running 'box env'
+    # These variables are automatically exported when running 'box install'
     # ========================================================================
     Envs = @{
         # Example:
@@ -52,14 +52,18 @@
     # ========================================================================
     # Build Configuration
     # ========================================================================
+    # These settings are automatically exported to .env for use in Makefile
+    # ========================================================================
     Build = @{
         # Executable name (if building binary)
         # ProgramName = '{{PROJECT_NAME}}'
-        
+
         # Default CPU target (68000, 68020, 68040, 68060, 68080)
+        # Exported as: DEFAULT_CPU
         DefaultCPU = '68020'
-        
+
         # Default FPU (empty, 68881, 68882, 68040, 68060, 68080)
+        # Exported as: DEFAULT_FPU
         DefaultFPU = ''
     }
 }
