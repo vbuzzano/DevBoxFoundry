@@ -34,6 +34,26 @@ $OutputFile = Join-Path $OutputDir 'box.ps1'
 Write-Host "`n🔨 DevBox Compilation System" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`n" -ForegroundColor DarkGray
 
+# Auto-increment patch version (X.Y.N)
+$DevBoxScript = Join-Path $SourceDir 'devbox.ps1'
+if (Test-Path $DevBoxScript) {
+    Write-Host "🔢 Auto-incrementing version..." -ForegroundColor Yellow
+    $content = Get-Content $DevBoxScript -Raw
+    if ($content -match "\`$Script:DevBoxVersion\s*=\s*'((\d+)\.(\d+)\.(\d+))'") {
+        $currentVersion = $matches[1]
+        $major = [int]$matches[2]
+        $minor = [int]$matches[3]
+        $patch = [int]$matches[4]
+        $newPatch = $patch + 1
+        $newVersion = "$major.$minor.$newPatch"
+        
+        $content = $content -replace "(\`$Script:DevBoxVersion\s*=\s*)'[\d.]+'" , "`$1'$newVersion'"
+        Set-Content -Path $DevBoxScript -Value $content -NoNewline
+        
+        Write-Host "   $currentVersion → $newVersion" -ForegroundColor Gray
+    }
+}
+
 # Validate source files exist
 if (-not (Test-Path $ModulesDir)) {
     Write-Host "✗ ERROR: Modules directory not found: $ModulesDir" -ForegroundColor Red
