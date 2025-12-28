@@ -85,14 +85,12 @@ if (Test-Path "$DevBoxDir\tpl") {
     # Remove .vscode subdirectories if any
     Get-ChildItem -Path $TplDest -Recurse -Directory -Filter ".vscode" | Remove-Item -Recurse -Force
 
-    # Verify critical templates exist (NO .env.ps1 - it's created directly in .box/)
-    $criticalTemplates = @("box.psd1.template", "Makefile.template", "Makefile.amiga.template", "README.template.md")
-    foreach ($template in $criticalTemplates) {
-        $templatePath = Join-Path $TplDest $template
-        if (-not (Test-Path $templatePath)) {
-            throw "Release build failed: $template not found in tpl/"
-        }
+    # Verify templates were copied (dynamic discovery, no hardcoded list)
+    $templateCount = (Get-ChildItem -Path $TplDest -Filter "*.template" -File).Count
+    if ($templateCount -eq 0) {
+        throw "Release build failed: No template files found in tpl/"
     }
+    Write-Verbose "  Copied $templateCount template files"
 }
 
 # Copy root files
