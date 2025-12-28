@@ -77,17 +77,17 @@ function Get-ConfigBoxVariables {
         Supports nested keys (converts to uppercase with _ prefix).
 
     .PARAMETER ConfigPath
-        Path to config.psd1 file. Defaults to box.config.psd1 in current directory.
+        Path to config.psd1 file. Defaults to .box/project.psd1 in current directory.
 
     .OUTPUTS
-        [hashtable] Configuration variables from box.config.psd1
+        [hashtable] Configuration variables from .box/project.psd1
 
     .EXAMPLE
         $config = Get-ConfigBoxVariables
         # Returns: @{ PROJECT_NAME = "MyProject"; VERSION = "0.1.0" }
     #>
     param(
-        [string]$ConfigPath = 'box.config.psd1'
+        [string]$ConfigPath = '.box/project.psd1'
     )
 
     $variables = @{}
@@ -600,80 +600,86 @@ function Invoke-BoxInit {
     <#
     .SYNOPSIS
         Generate project files from .box/tpl/ templates
-    
+
     .DESCRIPTION
         Reads template files from .box/tpl/ and generates corresponding files
         in the project root. Replaces {{TOKEN}} placeholders with values from
         box.config.psd1 and .env.
-        
+
         Only creates missing files - safe to re-run without overwriting existing files.
-    
+
     .EXAMPLE
         Invoke-BoxInit
         Generates all missing files from templates
     #>
-    
+
     Write-Host ""
     Write-Host "━" * 60 -ForegroundColor DarkCyan
     Write-Host "  Generating Files from Templates" -ForegroundColor Cyan
     Write-Host "━" * 60 -ForegroundColor DarkCyan
-    
+
     # Check if we're in a project with .box/
     if (-not (Test-Path ".box")) {
         Write-Host "  ❌ Not in a DevBox project (no .box/ directory found)" -ForegroundColor Red
         Write-Host "  Run 'devbox init' to create a new project" -ForegroundColor Gray
         return
     }
-    
+
     # Load configuration
     $configVars = Get-ConfigBoxVariables
-    
+
     # Load environment variables
     $envVars = Get-TemplateVariables
-    
+
     # Merge both (env overrides config)
     $allVars = $configVars.Clone()
     foreach ($key in $envVars.Keys) {
         $allVars[$key] = $envVars[$key]
     }
-    
+
     # Find all template files
     $templatePath = ".box/tpl"
     if (-not (Test-Path $templatePath)) {
         Write-Host "  ❌ Template directory not found: $templatePath" -ForegroundColor Red
         return
     }
-    
+
     $templates = Get-ChildItem -Path $templatePath -Filter "*.template*" -File
     if ($templates.Count -eq 0) {
         Write-Warning "No template files found in $templatePath"
         return
     }
-    
+
     Write-Host ""
     $generated = 0
     $skipped = 0
-    
+
     foreach ($template in $templates) {
-        # Determine output filename
+        # Determine output filename and path
         $outputName = $template.Name -replace '\.template', ''
-        $outputPath = Join-Path (Get-Location) $outputName
         
+        # box.config goes to .box/, other files to project root
+        if ($outputName -eq 'box.config') {
+            $outputPath = Join-Path '.box' $outputName
+        } else {
+            $outputPath = Join-Path (Get-Location) $outputName
+        }
+
         # Skip if file already exists
         if (Test-Path $outputPath) {
             Write-Host "  ⏭️  Skipping $outputName (already exists)" -ForegroundColor Gray
             $skipped++
             continue
         }
-        
+
         # Read template content
         $content = Get-Content $template.FullName -Raw -Encoding UTF8
-        
+
         # Replace all {{TOKEN}} placeholders
         foreach ($key in $allVars.Keys) {
             $content = $content -replace "{{$key}}", $allVars[$key]
         }
-        
+
         # Write output file
         try {
             Set-Content -Path $outputPath -Value $content -Encoding UTF8 -NoNewline
@@ -684,12 +690,12 @@ function Invoke-BoxInit {
             Write-Host "  ❌ Failed to create $outputName`: $_" -ForegroundColor Red
         }
     }
-    
+
     Write-Host ""
     Write-Host "━" * 60 -ForegroundColor DarkCyan
     Write-Host "  Summary: $generated generated, $skipped skipped" -ForegroundColor Cyan
     Write-Host "━" * 60 -ForegroundColor DarkCyan
-    
+
     if ($generated -eq 0 -and $skipped -gt 0) {
         Write-Host ""
         Write-Host "  💡 All files already exist. Use 'box env update' to regenerate." -ForegroundColor Yellow

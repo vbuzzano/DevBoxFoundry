@@ -3,11 +3,15 @@
 # ============================================================================
 
 function Invoke-Install {
-    # Run wizard if config doesn't exist
+    # Generate project files from templates if they don't exist
     if ($NeedsWizard) {
-        if (-not (Invoke-ConfigWizard)) {
-            return
-        }
+        Write-Host ""
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+        Write-Host "  Generating Files from Templates" -ForegroundColor Cyan
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+        Write-Host ""
+
+        Invoke-BoxInit
     }
 
     Write-Host ""
@@ -364,15 +368,15 @@ function Invoke-Init {
     <#
     .SYNOPSIS
         Generate missing project files from templates
-    
+
     .DESCRIPTION
         Calls Invoke-BoxInit from templates.ps1 module to generate
         README.md, box.config.psd1, and other files from .box/tpl/ templates.
         Only creates missing files - safe to re-run.
-    
+
     .EXAMPLE
         box init
     #>
-    
+
     Invoke-BoxInit
 }

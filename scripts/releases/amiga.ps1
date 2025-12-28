@@ -78,15 +78,15 @@ if (Test-Path "$DevBoxDir\tpl") {
     # Copy entire tpl/ directory, excluding .vscode
     $TplSource = Join-Path $DevBoxDir "tpl"
     $TplDest = Join-Path $ReleaseDir "tpl"
-    
+
     # Copy recursively, then remove .vscode if present
     Copy-Item -Path $TplSource -Destination $TplDest -Recurse -Force
-    
+
     # Remove .vscode subdirectories if any
     Get-ChildItem -Path $TplDest -Recurse -Directory -Filter ".vscode" | Remove-Item -Recurse -Force
-    
-    # Verify critical templates exist
-    $criticalTemplates = @(".env.ps1", "Makefile.template", "Makefile.amiga.template")
+
+    # Verify critical templates exist (NO .env.ps1 - it's created directly in .box/)
+    $criticalTemplates = @("box.config.template", "Makefile.template", "Makefile.amiga.template", "README.template.md")
     foreach ($template in $criticalTemplates) {
         $templatePath = Join-Path $TplDest $template
         if (-not (Test-Path $templatePath)) {

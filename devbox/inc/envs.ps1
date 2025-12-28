@@ -15,18 +15,35 @@ function Generate-DotEnvFile {
     )
 
     # Project settings from merged config
+    # Support both flat keys (PROJECT_NAME) and nested (Project.Name)
+    if ($Config.PROJECT_NAME) {
+        $lines += "PROJECT_NAME=$($Config.PROJECT_NAME)"
+        $programName = if ($Config.PROGRAM_NAME) { $Config.PROGRAM_NAME } else { $Config.PROJECT_NAME }
+        $lines += "PROGRAM_NAME=$programName"
+    } elseif ($Config.Project -and $Config.Project.Name) {
+        $lines += "PROJECT_NAME=$($Config.Project.Name)"
+        $lines += "PROGRAM_NAME=$($Config.Project.Name)"
+    }
+
+    if ($Config.DESCRIPTION) {
+        $lines += "DESCRIPTION=$($Config.DESCRIPTION)"
+    } elseif ($Config.Project -and $Config.Project.Description) {
+        $lines += "DESCRIPTION=$($Config.Project.Description)"
+    }
+
+    if ($Config.VERSION) {
+        $lines += "VERSION=$($Config.VERSION)"
+    } elseif ($Config.Project -and $Config.Project.Version) {
+        $lines += "VERSION=$($Config.Project.Version)"
+    }
+
+    # CPU/FPU from nested config only
     if ($Config.Project) {
-        if ($Config.Project.Name) {
-            $lines += "PROGRAM_NAME=$($Config.Project.Name)"
-        }
         if ($Config.Project.DefaultCPU) {
             $lines += "DEFAULT_CPU=$($Config.Project.DefaultCPU)"
         }
         if ($Config.Project.DefaultFPU) {
             $lines += "DEFAULT_FPU=$($Config.Project.DefaultFPU)"
-        }
-        if ($Config.Project.Version) {
-            $lines += "VERSION=$($Config.Project.Version)"
         }
     }
 

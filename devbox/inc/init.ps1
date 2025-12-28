@@ -48,6 +48,9 @@ $script:SysConfig = Import-PowerShellDataFile $SysConfigFile
 $script:UserConfigFile = Join-Path $BaseDir $USER_CONFIG_FILENAME
 $script:UserConfigTemplate = Join-Path $BaseDir $SysConfig.UserConfigTemplate
 
+# Project config (created by devbox init with PROJECT_NAME, DESCRIPTION)
+$script:ProjectConfigFile = Join-Path $BoxDir 'project.psd1'
+
 # Handle missing user config based on command
 $script:SkipExecution = $false
 $script:StateExists = Test-Path (Join-Path $BaseDir $STATE_FILENAME)
@@ -65,14 +68,28 @@ if ($BoxCommand -in @("uninstall", "env", "pkg")) {
 
 # Load config if not skipping
 if (-not $SkipExecution) {
+    # Load project config if exists
+    $script:ProjectConfig = @{}
+    if (Test-Path $ProjectConfigFile) {
+        $script:ProjectConfig = Import-PowerShellDataFile $ProjectConfigFile
+    }
+
     if (Test-Path $UserConfigFile) {
         $script:UserConfig = Import-PowerShellDataFile $UserConfigFile
         $script:Config = Merge-Config -SysConfig $SysConfig -UserConfig $UserConfig
+        # Merge project config into $Config
+        foreach ($key in $ProjectConfig.Keys) {
+            $script:Config[$key] = $ProjectConfig[$key]
+        }
     }
     elseif ($BoxCommand -eq "install" -or $BoxCommand -eq "") {
         # install: will run wizard later in Invoke-Install
         $script:UserConfig = @{}
         $script:Config = $SysConfig
+        # Still merge project config
+        foreach ($key in $ProjectConfig.Keys) {
+            $script:Config[$key] = $ProjectConfig[$key]
+        }
         $script:NeedsWizard = $true
     }
     else {

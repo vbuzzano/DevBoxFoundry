@@ -4,11 +4,11 @@
     Description = '{{DESCRIPTION}}'
     ProgramName = '{{PROGRAM_NAME}}'
     Version = '0.1.0'
-    
+
     # Build Configuration
     DefaultCPU = 'm68020'
     DefaultFPU = ''
-    
+
     # Package Sources
     PackageSources = @(
         @{
@@ -17,7 +17,7 @@
             Type = 'archive'
         }
     )
-    
+
     # Installed Packages
     Packages = @()
 }
