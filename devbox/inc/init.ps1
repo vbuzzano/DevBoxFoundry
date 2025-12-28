@@ -77,19 +77,15 @@ if (-not $SkipExecution) {
     if (Test-Path $UserConfigFile) {
         $script:UserConfig = Import-PowerShellDataFile $UserConfigFile
         $script:Config = Merge-Config -SysConfig $SysConfig -UserConfig $UserConfig
-        # Merge project config into $Config
-        foreach ($key in $ProjectConfig.Keys) {
-            $script:Config[$key] = $ProjectConfig[$key]
-        }
+        # Merge project config into $Config (using Merge-Hashtable for arrays concatenation)
+        $script:Config = Merge-Hashtable -Base $Config -Override $ProjectConfig
     }
     elseif ($BoxCommand -eq "install" -or $BoxCommand -eq "") {
         # install: will run wizard later in Invoke-Install
         $script:UserConfig = @{}
         $script:Config = $SysConfig
-        # Still merge project config
-        foreach ($key in $ProjectConfig.Keys) {
-            $script:Config[$key] = $ProjectConfig[$key]
-        }
+        # Merge project config (using Merge-Hashtable for arrays concatenation)
+        $script:Config = Merge-Hashtable -Base $Config -Override $ProjectConfig
         $script:NeedsWizard = $true
     }
     else {

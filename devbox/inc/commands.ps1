@@ -5,13 +5,9 @@
 function Invoke-Install {
     # Generate project files from templates if they don't exist
     if ($NeedsWizard) {
-        Write-Host ""
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-        Write-Host "  Generating Files from Templates" -ForegroundColor Cyan
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-        Write-Host ""
-
-        Invoke-BoxInit
+        if (-not (Invoke-ConfigWizard)) {
+            return
+        }
     }
 
     Write-Host ""

@@ -47,10 +47,10 @@ if (Test-Path $DevBoxScript) {
         $patch = [int]$matches[4]
         $newPatch = $patch + 1
         $newVersion = "$major.$minor.$newPatch"
-        
+
         $content = $content -replace "(\`$Script:DevBoxVersion\s*=\s*)'[\d.]+'" , "`$1'$newVersion'"
         Set-Content -Path $DevBoxScript -Value $content -NoNewline
-        
+
         Write-Host "   $currentVersion → $newVersion" -ForegroundColor Gray
         $currentVersion = $newVersion
     }
