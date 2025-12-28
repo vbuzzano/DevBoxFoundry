@@ -165,6 +165,17 @@ if (Test-Path $BootstrapSource) {
     Write-Verbose "  Copied: devbox.ps1 to dist/"
 }
 
+# Copy templates directory
+$TplSource = Join-Path $SourceDir 'tpl'
+$TplDest = Join-Path $OutputDir 'tpl'
+if (Test-Path $TplSource) {
+    if (Test-Path $TplDest) {
+        Remove-Item -Recurse -Force $TplDest
+    }
+    Copy-Item -Path $TplSource -Destination $TplDest -Recurse -Force
+    Write-Verbose "  Copied: tpl/ to dist/"
+}
+
 # Verify output
 if (Test-Path $OutputFile) {
     $outputSize = (Get-Item $OutputFile).Length
