@@ -467,6 +467,9 @@ int main(void) {
         Write-Host "    .\box.ps1 install" -ForegroundColor Gray
         Write-Host ''
 
+        # Change to project directory
+        Set-Location $TargetDir
+
         # Clear tracking on success
         $Script:CreatedItems = @()
     }
