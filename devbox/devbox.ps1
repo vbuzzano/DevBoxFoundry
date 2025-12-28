@@ -347,14 +347,14 @@ function Initialize-NewProject {
         Write-Step 'Copying templates'
         $TplPath = Join-Path $BoxPath 'tpl'
         New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
-        
+
         # Try to find templates (development or release location)
         $SourceTplPath = Join-Path (Split-Path -Parent $PSCommandPath) 'tpl'
         if (-not (Test-Path $SourceTplPath)) {
             # Try parent directory (release structure)
             $SourceTplPath = Join-Path (Split-Path -Parent (Split-Path -Parent $PSCommandPath)) 'tpl'
         }
-        
+
         if (Test-Path $SourceTplPath) {
             Get-ChildItem -Path $SourceTplPath -File | ForEach-Object {
                 Copy-Item $_.FullName (Join-Path $TplPath $_.Name) -Force
@@ -463,8 +463,8 @@ int main(void) {
         Write-Host "  📁 Location: $TargetDir" -ForegroundColor Cyan
         Write-Host "  🚀 Next steps:" -ForegroundColor Cyan
         Write-Host "    cd $SafeName" -ForegroundColor Gray
-        Write-Host "    # Edit box.psd1 to configure your project" -ForegroundColor Gray
-        Write-Host "    .\box.ps1 install" -ForegroundColor Gray
+        Write-Host "    1. Edit box.psd1 to configure your project" -ForegroundColor Gray
+        Write-Host "    2. Run: box install" -ForegroundColor Gray
         Write-Host ''
 
         # Change to project directory

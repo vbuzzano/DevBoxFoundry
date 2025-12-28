@@ -104,11 +104,11 @@ if (-not $SkipExecution) {
 # ============================================================================
 
 # Cache path (with override support)
-$script:CacheDir = if ($Config.CachePath) { 
-    if ([System.IO.Path]::IsPathRooted($Config.CachePath)) { $Config.CachePath } 
+$script:CacheDir = if ($Config.CachePath) {
+    if ([System.IO.Path]::IsPathRooted($Config.CachePath)) { $Config.CachePath }
     else { Join-Path $BaseDir $Config.CachePath }
-} else { 
-    Join-Path $BaseDir $Config.BoxPaths.Cache 
+} else {
+    Join-Path $BaseDir $Config.BoxPaths.Cache
 }
 $script:DownloadsDir = $CacheDir
 $script:TempDir = Join-Path $CacheDir "temp"
