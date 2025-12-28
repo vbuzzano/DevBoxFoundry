@@ -86,7 +86,7 @@ if (Test-Path "$DevBoxDir\tpl") {
     Get-ChildItem -Path $TplDest -Recurse -Directory -Filter ".vscode" | Remove-Item -Recurse -Force
 
     # Verify critical templates exist (NO .env.ps1 - it's created directly in .box/)
-    $criticalTemplates = @("box.config.template", "Makefile.template", "Makefile.amiga.template", "README.template.md")
+    $criticalTemplates = @("box.psd1.template", "Makefile.template", "Makefile.amiga.template", "README.template.md")
     foreach ($template in $criticalTemplates) {
         $templatePath = Join-Path $TplDest $template
         if (-not (Test-Path $templatePath)) {

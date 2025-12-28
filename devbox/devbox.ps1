@@ -348,7 +348,13 @@ function Initialize-NewProject {
         $TplPath = Join-Path $BoxPath 'tpl'
         New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
         
+        # Try to find templates (development or release location)
         $SourceTplPath = Join-Path (Split-Path -Parent $PSCommandPath) 'tpl'
+        if (-not (Test-Path $SourceTplPath)) {
+            # Try parent directory (release structure)
+            $SourceTplPath = Join-Path (Split-Path -Parent (Split-Path -Parent $PSCommandPath)) 'tpl'
+        }
+        
         if (Test-Path $SourceTplPath) {
             Get-ChildItem -Path $SourceTplPath -File | ForEach-Object {
                 Copy-Item $_.FullName (Join-Path $TplPath $_.Name) -Force
@@ -435,20 +441,22 @@ int main(void) {
             Write-Success 'Copied: box.ps1 to root'
         }
 
-        # Create .box/project.psd1 with project metadata for templates
+        # Generate box.psd1 at root from template (if not exists)
         Write-Step 'Creating project config'
-        $ProjectConfigPath = Join-Path $BoxPath 'project.psd1'
-        $ProjectConfigContent = @"
-@{
-    PROJECT_NAME = '$ProjectName'
-    DESCRIPTION = '$Description'
-    PROGRAM_NAME = '$ProjectName'
-    VERSION = '0.1.0'
-}
-"@
-        Set-Content -Path $ProjectConfigPath -Value $ProjectConfigContent -Encoding UTF8
-        Track-Creation $ProjectConfigPath 'file'
-        Write-Success 'Created: .box/project.psd1'
+        $BoxPsd1Path = Join-Path $TargetDir 'box.psd1'
+        if (-not (Test-Path $BoxPsd1Path)) {
+            # Use template from .box/tpl/ (already copied)
+            $BoxPsd1Template = Join-Path $TplPath 'box.psd1.template'
+            if (Test-Path $BoxPsd1Template) {
+                $content = Get-Content $BoxPsd1Template -Raw -Encoding UTF8
+                $content = $content -replace '{{PROJECT_NAME}}', $ProjectName
+                $content = $content -replace '{{DESCRIPTION}}', $Description
+                $content = $content -replace '{{PROGRAM_NAME}}', $ProjectName
+                Set-Content -Path $BoxPsd1Path -Value $content -Encoding UTF8
+                Track-Creation $BoxPsd1Path 'file'
+                Write-Success 'Created: box.psd1'
+            }
+        }
 
         # Generate files from templates using box install
         Write-Step 'Generating files from templates'

@@ -15,10 +15,14 @@ function Generate-DotEnvFile {
     )
 
     # Project settings from merged config
-    # Support both flat keys (PROJECT_NAME) and nested (Project.Name)
+    # Support: flat (PROJECT_NAME), nested (Project.Name), or direct (Name)
     if ($Config.PROJECT_NAME) {
         $lines += "PROJECT_NAME=$($Config.PROJECT_NAME)"
         $programName = if ($Config.PROGRAM_NAME) { $Config.PROGRAM_NAME } else { $Config.PROJECT_NAME }
+        $lines += "PROGRAM_NAME=$programName"
+    } elseif ($Config.Name) {
+        $lines += "PROJECT_NAME=$($Config.Name)"
+        $programName = if ($Config.ProgramName) { $Config.ProgramName } else { $Config.Name }
         $lines += "PROGRAM_NAME=$programName"
     } elseif ($Config.Project -and $Config.Project.Name) {
         $lines += "PROJECT_NAME=$($Config.Project.Name)"
@@ -27,24 +31,31 @@ function Generate-DotEnvFile {
 
     if ($Config.DESCRIPTION) {
         $lines += "DESCRIPTION=$($Config.DESCRIPTION)"
+    } elseif ($Config.Description) {
+        $lines += "DESCRIPTION=$($Config.Description)"
     } elseif ($Config.Project -and $Config.Project.Description) {
         $lines += "DESCRIPTION=$($Config.Project.Description)"
     }
 
     if ($Config.VERSION) {
         $lines += "VERSION=$($Config.VERSION)"
+    } elseif ($Config.Version) {
+        $lines += "VERSION=$($Config.Version)"
     } elseif ($Config.Project -and $Config.Project.Version) {
         $lines += "VERSION=$($Config.Project.Version)"
     }
 
-    # CPU/FPU from nested config only
-    if ($Config.Project) {
-        if ($Config.Project.DefaultCPU) {
-            $lines += "DEFAULT_CPU=$($Config.Project.DefaultCPU)"
-        }
-        if ($Config.Project.DefaultFPU) {
-            $lines += "DEFAULT_FPU=$($Config.Project.DefaultFPU)"
-        }
+    # CPU/FPU from config (direct or nested)
+    if ($Config.DefaultCPU) {
+        $lines += "DEFAULT_CPU=$($Config.DefaultCPU)"
+    } elseif ($Config.Project -and $Config.Project.DefaultCPU) {
+        $lines += "DEFAULT_CPU=$($Config.Project.DefaultCPU)"
+    }
+
+    if ($Config.DefaultFPU) {
+        $lines += "DEFAULT_FPU=$($Config.DefaultFPU)"
+    } elseif ($Config.Project -and $Config.Project.DefaultFPU) {
+        $lines += "DEFAULT_FPU=$($Config.Project.DefaultFPU)"
     }
 
     $lines += ""

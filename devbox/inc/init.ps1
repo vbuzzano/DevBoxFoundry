@@ -48,8 +48,8 @@ $script:SysConfig = Import-PowerShellDataFile $SysConfigFile
 $script:UserConfigFile = Join-Path $BaseDir $USER_CONFIG_FILENAME
 $script:UserConfigTemplate = Join-Path $BaseDir $SysConfig.UserConfigTemplate
 
-# Project config (created by devbox init with PROJECT_NAME, DESCRIPTION)
-$script:ProjectConfigFile = Join-Path $BoxDir 'project.psd1'
+# Project config (box.psd1 at root, created by devbox init)
+$script:ProjectConfigFile = Join-Path $BaseDir 'box.psd1'
 
 # Handle missing user config based on command
 $script:SkipExecution = $false

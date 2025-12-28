@@ -77,17 +77,17 @@ function Get-ConfigBoxVariables {
         Supports nested keys (converts to uppercase with _ prefix).
 
     .PARAMETER ConfigPath
-        Path to config.psd1 file. Defaults to .box/project.psd1 in current directory.
+        Path to config.psd1 file. Defaults to box.psd1 in current directory.
 
     .OUTPUTS
-        [hashtable] Configuration variables from .box/project.psd1
+        [hashtable] Configuration variables from box.psd1
 
     .EXAMPLE
         $config = Get-ConfigBoxVariables
         # Returns: @{ PROJECT_NAME = "MyProject"; VERSION = "0.1.0" }
     #>
     param(
-        [string]$ConfigPath = '.box/project.psd1'
+        [string]$ConfigPath = 'box.psd1'
     )
 
     $variables = @{}
@@ -655,15 +655,9 @@ function Invoke-BoxInit {
     $skipped = 0
 
     foreach ($template in $templates) {
-        # Determine output filename and path
+        # Determine output filename
         $outputName = $template.Name -replace '\.template', ''
-        
-        # box.config goes to .box/, other files to project root
-        if ($outputName -eq 'box.config') {
-            $outputPath = Join-Path '.box' $outputName
-        } else {
-            $outputPath = Join-Path (Get-Location) $outputName
-        }
+        $outputPath = Join-Path (Get-Location) $outputName
 
         # Skip if file already exists
         if (Test-Path $outputPath) {
