@@ -343,45 +343,17 @@ function Initialize-NewProject {
             throw
         }
 
-        # Create templates directory and copy templates
-        Write-Step 'Copying templates'
-        $TplPath = Join-Path $BoxPath 'tpl'
-        New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
-
-        # Create templates directory and copy templates
+        # Copy templates to .box/tpl/
         Write-Step 'Copying templates'
         $TplPath = Join-Path $BoxPath 'tpl'
         New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
         
-        # Find template source (development or release)
-        $SourceTplPath = $null
-        if ($PSCommandPath) {
-            # Try adjacent to devbox.ps1 first (development: devbox/tpl/)
-            $devPath = Join-Path (Split-Path -Parent $PSCommandPath) 'tpl'
-            if (Test-Path $devPath) {
-                $SourceTplPath = $devPath
-            }
-            else {
-                # Try release location (tpl/ at same level as devbox.ps1)
-                $releasePath = Join-Path (Split-Path -Parent $PSCommandPath) '..\tpl'
-                if (Test-Path $releasePath) {
-                    $SourceTplPath = Resolve-Path $releasePath
-                }
-            }
-        }
-        
-        if ($SourceTplPath -and (Test-Path $SourceTplPath)) {
-            # Copy all template files except .env.ps1 and documentation
-            Get-ChildItem -Path $SourceTplPath -File | Where-Object {
-                $_.Name -ne '.env.ps1' -and $_.Name -ne 'README.release.md'
-            } | ForEach-Object {
-                $destPath = Join-Path $TplPath $_.Name
-                Copy-Item $_.FullName $destPath -Force
+        $SourceTplPath = Join-Path (Split-Path -Parent $PSCommandPath) 'tpl'
+        if (Test-Path $SourceTplPath) {
+            Get-ChildItem -Path $SourceTplPath -File | ForEach-Object {
+                Copy-Item $_.FullName (Join-Path $TplPath $_.Name) -Force
             }
             Write-Success "Copied: Templates to .box/tpl/"
-        }
-        else {
-            Write-Warning "Template source not found - skipping template copy"
         }
 
         # Create .env.ps1 directly in .box/ (NOT a template)
