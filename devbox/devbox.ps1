@@ -375,7 +375,7 @@ if (Test-Path .env) {
     }
 }
 
-# Add .box and scripts to PATH
+# add directory script top path
 $env:PATH = "$pwd\.box;$pwd\scripts;$env:PATH;"
 '@
         Set-Content -Path $EnvPsPath -Value $EnvPsContent -Encoding UTF8
@@ -385,7 +385,7 @@ $env:PATH = "$pwd\.box;$pwd\scripts;$env:PATH;"
 
         # Create directories
         Write-Step 'Creating project structure'
-        foreach ($Dir in @('src', 'include', 'lib', 'bin', 'docs', 'scripts')) {
+        foreach ($Dir in @('src', 'docs', 'scripts')) {
             $DirPath = Join-Path $TargetDir $Dir
             New-Item -ItemType Directory -Path $DirPath -Force | Out-Null
             Track-Creation $DirPath 'directory'
@@ -403,7 +403,7 @@ int main(void) {
 "@
         Set-Content -Path $MainCPath -Value $MainCContent -Encoding UTF8
         Track-Creation $MainCPath 'file'
-        Write-Success 'Created: src/, include/, lib/, bin/, docs/, scripts/, src/main.c'
+        Write-Success 'Created: src/, docs/, scripts/, src/main.c'
 
         # VS Code integration (always create in init mode)
         Write-Step 'Configuring VS Code'
@@ -431,15 +431,6 @@ int main(void) {
         Set-Content -Path $SettingsPath -Value $SettingsContent -Encoding UTF8
         Track-Creation $SettingsPath 'file'
         Write-Success 'Created: .vscode/settings.json'
-
-        # Copy box.ps1 to project root
-        Write-Step 'Setting up box.ps1'
-        $SourceBox = Join-Path $BoxPath 'box.ps1'
-        $TargetBox = Join-Path $TargetDir 'box.ps1'
-        if (Test-Path $SourceBox) {
-            Copy-Item $SourceBox $TargetBox -Force
-            Write-Success 'Copied: box.ps1 to root'
-        }
 
         # Generate box.psd1 at root from template (if not exists)
         Write-Step 'Creating project config'
