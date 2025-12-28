@@ -1,28 +1,10 @@
 # DevBox Foundry
 
-Development Kit for AmigaOS Cross-Compilation on Windows with VBCC.
+Dev Kit
 
-## Quick Start
+## Vision
 
-```powershell
-# Download and run the standalone installer
-irm https://github.com/vbuzzano/DevBoxFoundry/raw/main/install.ps1 | iex
-
-# Follow the interactive wizard to create your project
-cd MyProject
-.\box.ps1 install   # Install packages
-make                # Build
-```
-
-## For Developers
-
-```powershell
-git clone https://github.com/vbuzzano/DevBoxFoundry.git
-cd DevBoxFoundry
-
-make help       # Show all targets
-make build      # Build release
-```
+Generic workspace creation tool with modular packages. Create any type of development environment (Amiga/VBCC, or any other stack) through composable modules. Cross-platform support planned.
 
 ## License
 
