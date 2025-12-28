@@ -53,17 +53,25 @@
     # Build Configuration
     # ========================================================================
     # These settings are automatically exported to .env for use in Makefile
+    # Variable names in this section are used as-is (no transformation)
     # ========================================================================
     Build = @{
         # Executable name (if building binary)
-        # ProgramName = '{{PROJECT_NAME}}'
+        # PROGRAM_NAME = '{{PROJECT_NAME}}'
 
         # Default CPU target (68000, 68020, 68040, 68060, 68080)
-        # Exported as: DEFAULT_CPU
-        DefaultCPU = '68020'
+        DEFAULT_CPU = '68020'
 
         # Default FPU (empty, 68881, 68882, 68040, 68060, 68080)
-        # Exported as: DEFAULT_FPU
-        DefaultFPU = ''
+        DEFAULT_FPU = ''
+
+        # Project paths
+        SRC_DIR     = 'src'
+        INCLUDE_DIR = 'include'
+        BUILD_DIR   = 'build'
+        ASM_DIR     = 'build/asm'
+        OBJ_DIR     = 'build/obj'
+        DIST_DIR    = 'dist'
+        VENDOR_DIR  = 'vendor'
     }
 }

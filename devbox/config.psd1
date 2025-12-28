@@ -29,20 +29,17 @@
     }
 
     # ========================================================================
-    # Project Structure Paths (used in Makefile.env)
+    # Build Configuration (exported to .env)
     # ========================================================================
-    Paths = @{
-        SrcDir       = "src"
-        IncludeDir   = "include"
-        BuildDir     = "build"
-        AsmDir       = "build/asm"
-        ObjDir       = "build/obj"
-        DistDir      = "dist"
-        VendorDir    = "vendor"
-
-        # Tools (in .box/tools)
-        ACP          = "./.box/tools/acp.exe"
-        GDB          = "./.box/tools/bgdbserver"
+    Build = @{
+        # Project paths
+        SRC_DIR      = "src"
+        INCLUDE_DIR  = "include"
+        BUILD_DIR    = "build"
+        ASM_DIR      = "build/asm"
+        OBJ_DIR      = "build/obj"
+        DIST_DIR     = "dist"
+        VENDOR_DIR   = "vendor"
     }
 
     # ========================================================================

@@ -45,28 +45,14 @@ function Generate-DotEnvFile {
         $lines += "VERSION=$($Config.Project.Version)"
     }
 
-    # CPU/FPU from config (direct or nested)
-    if ($Config.DefaultCPU) {
-        $lines += "DEFAULT_CPU=$($Config.DefaultCPU)"
-    } elseif ($Config.Project -and $Config.Project.DefaultCPU) {
-        $lines += "DEFAULT_CPU=$($Config.Project.DefaultCPU)"
-    }
-
-    if ($Config.DefaultFPU) {
-        $lines += "DEFAULT_FPU=$($Config.DefaultFPU)"
-    } elseif ($Config.Project -and $Config.Project.DefaultFPU) {
-        $lines += "DEFAULT_FPU=$($Config.Project.DefaultFPU)"
-    }
-
     $lines += ""
-    $lines += "# Project Paths"
+    $lines += "# Build Configuration"
 
-    # Paths from merged config
-    if ($Config.Paths) {
-        foreach ($key in $Config.Paths.Keys) {
-            $value = $Config.Paths[$key]
-            $envKey = ($key -creplace '([A-Z])', '_$1').ToUpper().TrimStart('_')
-            $lines += "$envKey=$value"
+    # Build settings - use keys as-is (no transformation)
+    if ($Config.Build) {
+        foreach ($key in $Config.Build.Keys) {
+            $value = $Config.Build[$key]
+            $lines += "$key=$value"
         }
     }
 
@@ -116,27 +102,20 @@ function Show-EnvList {
     Write-Host "  [Project Settings]" -ForegroundColor Yellow
     if ($Config.Project) {
         if ($Config.Project.Name) {
-            Write-Host "    PROGRAM_NAME = $($Config.Project.Name)" -ForegroundColor White
-        }
-        if ($Config.Project.DefaultCPU) {
-            Write-Host "    DEFAULT_CPU = $($Config.Project.DefaultCPU)" -ForegroundColor White
-        }
-        if ($Config.Project.DefaultFPU) {
-            Write-Host "    DEFAULT_FPU = $($Config.Project.DefaultFPU)" -ForegroundColor White
+            Write-Host "    PROJECT_NAME = $($Config.Project.Name)" -ForegroundColor White
         }
         if ($Config.Project.Version) {
             Write-Host "    VERSION = $($Config.Project.Version)" -ForegroundColor White
         }
     }
 
-    # Paths
+    # Build configuration
     Write-Host ""
-    Write-Host "  [Project Paths]" -ForegroundColor Yellow
-    if ($Config.Paths) {
-        foreach ($key in $Config.Paths.Keys) {
-            $value = $Config.Paths[$key]
-            $envKey = ($key -creplace '([A-Z])', '_$1').ToUpper().TrimStart('_')
-            Write-Host "    $envKey = $value" -ForegroundColor White
+    Write-Host "  [Build Configuration]" -ForegroundColor Yellow
+    if ($Config.Build) {
+        foreach ($key in $Config.Build.Keys) {
+            $value = $Config.Build[$key]
+            Write-Host "    $key = $value" -ForegroundColor White
         }
     }
 
