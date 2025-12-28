@@ -70,7 +70,7 @@ param(
 )
 
 # Version info
-$Script:DevBoxVersion = '0.1.2'
+$Script:DevBoxVersion = '0.1.5'
 
 if ($Version) {
     Write-Host "DevBox v$Script:DevBoxVersion" -ForegroundColor Cyan

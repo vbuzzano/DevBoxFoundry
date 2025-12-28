@@ -36,6 +36,7 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 
 # Auto-increment patch version (X.Y.N)
 $DevBoxScript = Join-Path $SourceDir 'devbox.ps1'
+$currentVersion = "0.1.0"  # fallback
 if (Test-Path $DevBoxScript) {
     Write-Host "🔢 Auto-incrementing version..." -ForegroundColor Yellow
     $content = Get-Content $DevBoxScript -Raw
@@ -51,6 +52,7 @@ if (Test-Path $DevBoxScript) {
         Set-Content -Path $DevBoxScript -Value $content -NoNewline
         
         Write-Host "   $currentVersion → $newVersion" -ForegroundColor Gray
+        $currentVersion = $newVersion
     }
 }
 
@@ -174,6 +176,10 @@ if (-not (Test-Path $OutputDir)) {
 # Write compiled output
 Write-Host "💾 Writing compiled output..." -ForegroundColor Yellow
 $finalContent = $compiledContent -join "`n"
+
+# Inject version into compiled box.ps1
+$finalContent = $finalContent -replace "(\`$Script:BoxVersion\s*=\s*if\s*\(\`$Script:DevBoxVersion\)\s*\{\s*\`$Script:DevBoxVersion\s*\}\s*else\s*\{\s*)[^\}]+", "`$1'$currentVersion'"
+
 Set-Content -Path $OutputFile -Value $finalContent -Encoding UTF8 -NoNewline -ErrorAction Stop
 
 # Copy bootstrap installer to dist

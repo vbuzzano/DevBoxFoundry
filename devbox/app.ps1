@@ -35,10 +35,19 @@ param(
     [Parameter(Position = 2, ValueFromRemainingArguments = $true)]
     [string[]]$Args,
 
-    [switch]$Help
+    [switch]$Help,
+    [switch]$Version
 )
 
 $ErrorActionPreference = "Stop"
+
+# Version from devbox.ps1 (injected during compilation)
+$Script:BoxVersion = if ($Script:DevBoxVersion) { $Script:DevBoxVersion } else { "0.1.0" }
+
+if ($Version) {
+    Write-Host "Box v$Script:BoxVersion" -ForegroundColor Cyan
+    exit 0
+}
 
 # ============================================================================
 # Quick Help (before loading config)
