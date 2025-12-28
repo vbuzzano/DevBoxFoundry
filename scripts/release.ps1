@@ -33,12 +33,24 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 Write-Host ""
 
 try {
-    # Verify dist/release exists
-    if (-not (Test-Path $RELEASE_DIR)) {
-        Write-Host "❌ Error: $RELEASE_DIR not found" -ForegroundColor Red
-        Write-Host "   Run '.\scripts\dist.ps1' first to build the release" -ForegroundColor Yellow
-        exit 1
+    # Step 1: Build distribution (calls build-box.ps1 automatically)
+    Write-Host "📦 Building distribution..." -ForegroundColor Cyan
+    Write-Host ""
+
+    $distScript = "scripts\dist.ps1"
+    if (-not (Test-Path $distScript)) {
+        throw "Distribution script not found: $distScript"
     }
+
+    & $distScript -Release $Release
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Distribution build failed with exit code $LASTEXITCODE"
+    }
+
+    Write-Host ""
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host ""
 
     # Get release metadata from .vscode/settings.json
     $settingsPath = ".vscode\settings.json"

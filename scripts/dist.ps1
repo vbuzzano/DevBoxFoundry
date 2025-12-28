@@ -32,22 +32,19 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 Write-Host ""
 
 try {
-    # Step 1: Compile box.ps1
-    Write-Host "🔨 Compiling box.ps1..." -ForegroundColor Cyan
+    # Step 1: Build box.ps1 (always build before dist)
+    Write-Host "🔨 Building box.ps1..." -ForegroundColor Cyan
     Write-Host ""
 
     $buildScript = "scripts\build-box.ps1"
     if (-not (Test-Path $buildScript)) {
-        Write-Host "❌ Error: Build script not found: $buildScript" -ForegroundColor Red
-        exit 1
+        throw "Build script not found: $buildScript"
     }
 
     & $buildScript
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "❌ Error: Compilation failed" -ForegroundColor Red
-        exit 1
+        throw "Build failed with exit code $LASTEXITCODE"
     }
 
     Write-Host ""
