@@ -1,69 +1,62 @@
 <#
 .SYNOPSIS
-    Compiles modular DevBox sources into a single distributable box.ps1
+    Compiles modular Boxing sources into distributable box.ps1
 
 .DESCRIPTION
-    This script reads all PowerShell modules from devbox/inc/ and the main
-    app.ps1, then concatenates them into a single dist/box.ps1 file for
-    distribution. This enables modular development with single-file deployment.
+    This script reads all PowerShell modules from core/ and boxers/<BoxName>/,
+    then concatenates them into a single dist/<BoxName>/box.ps1 file for
+    distribution. Enables modular development with single-file deployment.
+
+.PARAMETER Box
+    Box name to build (default: AmiDevBox)
 
 .PARAMETER Verbose
     Show detailed compilation steps
 
 .EXAMPLE
-    .\build-box.ps1
-    Compiles devbox sources into dist/box.ps1
+    .\build-boxer.ps1
+    Compiles AmiDevBox (default) to dist/AmiDevBox/box.ps1
+
+.EXAMPLE
+    .\build-boxer.ps1 -Box PythonBox
+    Compiles PythonBox to dist/PythonBox/box.ps1
 
 .NOTES
-    Feature: 001-compilation-system
-    User Story: US1 - Basic Module Compilation
+    Feature: 012-boxing-system
+    Updated build system for multi-box support
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [string]$Box = 'AmiDevBox'
+)
 
 # Configuration
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$SourceDir = Join-Path $RepoRoot 'devbox'
-$ModulesDir = Join-Path $SourceDir 'inc'
-$MainScript = Join-Path $SourceDir 'app.ps1'
-$OutputDir = Join-Path $RepoRoot 'dist'
+$CoreDir = Join-Path $RepoRoot 'core'
+$BoxerDir = Join-Path $RepoRoot "boxers\$Box"
+$BoxTplDir = Join-Path $BoxerDir 'tpl'
+$BoxConfigFile = Join-Path $BoxerDir 'config.psd1'
+$BoxMetadataFile = Join-Path $BoxerDir 'metadata.psd1'
+$OutputDir = Join-Path $RepoRoot "dist\$Box"
 $OutputFile = Join-Path $OutputDir 'box.ps1'
 
-Write-Host "`n🔨 DevBox Compilation System" -ForegroundColor Cyan
+Write-Host "`n🔨 Boxing Compilation System" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`n" -ForegroundColor DarkGray
+Write-Host "  Box: $Box" -ForegroundColor Yellow
+Write-Host "  Output: $OutputFile`n" -ForegroundColor Gray
 
-# Auto-increment patch version (X.Y.N)
-$DevBoxScript = Join-Path $SourceDir 'devbox.ps1'
-$currentVersion = "0.1.0"  # fallback
-if (Test-Path $DevBoxScript) {
-    Write-Host "🔢 Auto-incrementing version..." -ForegroundColor Yellow
-    $content = Get-Content $DevBoxScript -Raw
-    if ($content -match "\`$Script:DevBoxVersion\s*=\s*'((\d+)\.(\d+)\.(\d+))'") {
-        $currentVersion = $matches[1]
-        $major = [int]$matches[2]
-        $minor = [int]$matches[3]
-        $patch = [int]$matches[4]
-        $newPatch = $patch + 1
-        $newVersion = "$major.$minor.$newPatch"
-
-        $content = $content -replace "(\`$Script:DevBoxVersion\s*=\s*)'[\d.]+'" , "`$1'$newVersion'"
-        Set-Content -Path $DevBoxScript -Value $content -NoNewline
-
-        Write-Host "   $currentVersion → $newVersion" -ForegroundColor Gray
-        $currentVersion = $newVersion
-    }
-}
-
-# Validate source files exist
-if (-not (Test-Path $ModulesDir)) {
-    Write-Host "✗ ERROR: Modules directory not found: $ModulesDir" -ForegroundColor Red
+# Validate boxer directory exists
+if (-not (Test-Path $BoxerDir)) {
+    Write-Host "✗ ERROR: Box directory not found: $BoxerDir" -ForegroundColor Red
+    Write-Host "  Available boxes: $(Get-ChildItem (Join-Path $RepoRoot 'boxers') -Directory | Select-Object -ExpandProperty Name | Join-String -Separator ', ')" -ForegroundColor Gray
     exit 1
 }
 
-if (-not (Test-Path $MainScript)) {
-    Write-Host "✗ ERROR: Main script not found: $MainScript" -ForegroundColor Red
+# Validate core modules exist
+if (-not (Test-Path $CoreDir)) {
+    Write-Host "✗ ERROR: Core directory not found: $CoreDir" -ForegroundColor Red
     exit 1
 }
 
