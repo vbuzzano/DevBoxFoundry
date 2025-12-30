@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    ApolloDevBox Development Environment Setup
+    Environment Setup
 
 .DESCRIPTION
     Manages the development environment for AmigaOS cross-compilation.
