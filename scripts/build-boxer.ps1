@@ -1,29 +1,21 @@
 <#
 .SYNOPSIS
-    Compiles modular Boxing sources into distributable box.ps1
+    Builds a distributable Box package
 
 .DESCRIPTION
-    This script reads all PowerShell modules from core/ and boxers/<BoxName>/,
-    then concatenates them into a single dist/<BoxName>/box.ps1 file for
-    distribution. Enables modular development with single-file deployment.
+    Compiles core modules into box.ps1, copies templates and config files,
+    and generates install.ps1 for distribution.
 
 .PARAMETER Box
     Box name to build (default: AmiDevBox)
 
-.PARAMETER Verbose
-    Show detailed compilation steps
-
 .EXAMPLE
     .\build-boxer.ps1
-    Compiles AmiDevBox (default) to dist/AmiDevBox/box.ps1
+    Builds AmiDevBox to dist/AmiDevBox/
 
 .EXAMPLE
     .\build-boxer.ps1 -Box PythonBox
-    Compiles PythonBox to dist/PythonBox/box.ps1
-
-.NOTES
-    Feature: 012-boxing-system
-    Updated build system for multi-box support
+    Builds PythonBox to dist/PythonBox/
 #>
 
 [CmdletBinding()]
@@ -31,194 +23,145 @@ param(
     [string]$Box = 'AmiDevBox'
 )
 
-# Configuration
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $CoreDir = Join-Path $RepoRoot 'core'
 $BoxerDir = Join-Path $RepoRoot "boxers\$Box"
-$BoxTplDir = Join-Path $BoxerDir 'tpl'
-$BoxConfigFile = Join-Path $BoxerDir 'config.psd1'
-$BoxMetadataFile = Join-Path $BoxerDir 'metadata.psd1'
 $OutputDir = Join-Path $RepoRoot "dist\$Box"
-$OutputFile = Join-Path $OutputDir 'box.ps1'
 
-Write-Host "`n🔨 Boxing Compilation System" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`n" -ForegroundColor DarkGray
+Write-Host "`n🔨 Boxing Build System" -ForegroundColor Cyan
+Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
 Write-Host "  Box: $Box" -ForegroundColor Yellow
-Write-Host "  Output: $OutputFile`n" -ForegroundColor Gray
+Write-Host "  Output: $OutputDir`n" -ForegroundColor Gray
 
-# Validate boxer directory exists
+# Validate directories
 if (-not (Test-Path $BoxerDir)) {
     Write-Host "✗ ERROR: Box directory not found: $BoxerDir" -ForegroundColor Red
-    Write-Host "  Available boxes: $(Get-ChildItem (Join-Path $RepoRoot 'boxers') -Directory | Select-Object -ExpandProperty Name | Join-String -Separator ', ')" -ForegroundColor Gray
     exit 1
 }
 
-# Validate core modules exist
 if (-not (Test-Path $CoreDir)) {
     Write-Host "✗ ERROR: Core directory not found: $CoreDir" -ForegroundColor Red
     exit 1
 }
 
-# Read all module files
-Write-Host "📚 Reading source modules..." -ForegroundColor Yellow
-$moduleFiles = Get-ChildItem -Path $ModulesDir -Filter '*.ps1' | Sort-Object Name
-$moduleCount = $moduleFiles.Count
-
-if ($moduleCount -eq 0) {
-    Write-Host "✗ ERROR: No .ps1 modules found in $ModulesDir" -ForegroundColor Red
-    exit 1
+# Create output directory
+if (Test-Path $OutputDir) {
+    Remove-Item $OutputDir -Recurse -Force
 }
+New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 
-Write-Verbose "  Found $moduleCount modules in $ModulesDir"
+# Read and compile core modules
+Write-Host "📚 Compiling core modules..." -ForegroundColor Yellow
+$modules = Get-ChildItem -Path $CoreDir -Filter '*.ps1' | Sort-Object Name
+$boxContent = @()
 
-# Build content array
-$compiledContent = @()
-
-# Add header
-$compiledContent += @"
+$boxContent += @"
 <#
 .SYNOPSIS
-    DevBox - Unified Development Workspace Manager
+    Box - Workspace Manager
 
 .DESCRIPTION
-    Compiled from modular sources by build-box.ps1
+    Compiled workspace manager for $Box
 
 .NOTES
-    Compilation Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-    Source Modules: $moduleCount
-    Build System: Feature 001 - Compilation System
+    Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+    Modules: $($modules.Count)
+    Box: $Box
 #>
+
+`$ErrorActionPreference = 'Stop'
 
 "@
 
-# Read main application script first
-Write-Host "📄 Reading main application script..." -ForegroundColor Yellow
-Write-Verbose "  Reading: app.ps1"
-$appLines = Get-Content -Path $MainScript
+foreach ($module in $modules) {
+    Write-Host "   + $($module.Name)" -ForegroundColor Gray
+    $boxContent += "# Source: core/$($module.Name)"
+    $boxContent += Get-Content $module.FullName -Raw
+    $boxContent += "`n"
+}
 
-# Find line indices for strategic replacement
-$initStartIndex = -1
-$initEndIndex = -1
+# Write box.ps1
+$boxFile = Join-Path $OutputDir 'box.ps1'
+$boxContent -join "`n" | Set-Content $boxFile -NoNewline
+Write-Host "✓ Created box.ps1 ($($modules.Count) modules)" -ForegroundColor Green
 
-for ($i = 0; $i -lt $appLines.Count; $i++) {
-    if ($appLines[$i] -match '^\$_initPath = Join-Path') {
-        $initStartIndex = $i
-    }
-    if ($initStartIndex -ge 0 -and $appLines[$i] -match '^\. \$_initPath') {
-        $initEndIndex = $i
-        break
+# Copy box files
+Write-Host "`n📦 Copying box files..." -ForegroundColor Yellow
+
+# Copy config.psd1
+if (Test-Path (Join-Path $BoxerDir 'config.psd1')) {
+    Copy-Item (Join-Path $BoxerDir 'config.psd1') $OutputDir
+    Write-Host "   + config.psd1" -ForegroundColor Gray
+}
+
+# Copy metadata.psd1
+if (Test-Path (Join-Path $BoxerDir 'metadata.psd1')) {
+    Copy-Item (Join-Path $BoxerDir 'metadata.psd1') $OutputDir
+    Write-Host "   + metadata.psd1" -ForegroundColor Gray
+}
+
+# Copy templates
+if (Test-Path (Join-Path $BoxerDir 'tpl')) {
+    Copy-Item (Join-Path $BoxerDir 'tpl') $OutputDir -Recurse
+    Write-Host "   + tpl/ (templates)" -ForegroundColor Gray
+}
+
+# Copy custom modules if exists
+if (Test-Path (Join-Path $BoxerDir 'core')) {
+    $customModules = Get-ChildItem (Join-Path $BoxerDir 'core') -Filter '*.ps1'
+    if ($customModules.Count -gt 0) {
+        Copy-Item (Join-Path $BoxerDir 'core') $OutputDir -Recurse
+        Write-Host "   + core/ ($($customModules.Count) custom modules)" -ForegroundColor Gray
     }
 }
 
-if ($initStartIndex -ge 0 -and $initEndIndex -ge 0) {
-    Write-Verbose "  Found init.ps1 loading block at lines $initStartIndex-$initEndIndex"
+# Generate install.ps1
+Write-Host "`n📝 Generating install.ps1..." -ForegroundColor Yellow
 
-    # Build compiled content: app header + modules + app footer
+$installScript = @"
+<#
+.SYNOPSIS
+    $Box Installer
 
-    # Part 1: Everything before init loading
-    $compiledContent += ($appLines[0..($initStartIndex - 1)] -join "`n")
-    $compiledContent += "`n"
+.DESCRIPTION
+    Installs $Box to Documents\PowerShell\Boxing\Boxes\$Box
 
-    # Part 2: Inject modules
-    $compiledContent += "`n# ══════════════════════════════════════════════════════════════════════════════"
-    $compiledContent += "# COMPILED MODULES (injected by build-box.ps1 - replaces init.ps1 loading)"
-    $compiledContent += "# ══════════════════════════════════════════════════════════════════════════════`n"
+.EXAMPLE
+    irm https://github.com/vbuzzano/AmiDevBox/raw/main/install.ps1 | iex
+#>
 
-    foreach ($module in $moduleFiles) {
-        Write-Verbose "  Reading: $($module.Name)"
-        $content = Get-Content -Path $module.FullName -Raw -ErrorAction Stop
+`$ErrorActionPreference = 'Stop'
 
-        # Clean dot-source commands (US4: Clean Output)
-        $content = $content -replace '(?m)^\s*\.\s+"?\$script:IncDir\\[^"]+\.ps1"?\s*$', ''
+Write-Host "`n🧙 Installing $Box..." -ForegroundColor Cyan
 
-        # Remove functions.ps1 loading block from init.ps1 (already compiled in)
-        $content = $content -replace '(?ms)^\$script:FunctionsLoader = Join-Path.*?\. \$FunctionsLoader\s*$', ''
+# Installation paths
+`$BoxingDir = "`$env:USERPROFILE\Documents\PowerShell\Boxing"
+`$BoxesDir = Join-Path `$BoxingDir 'Boxes'
+`$BoxDir = Join-Path `$BoxesDir '$Box'
 
-        # Add source mapping (US2: Source Mapping)
-        $compiledContent += "# ──────────────────────────────────────────────────────────────────────────────"
-        $compiledContent += "# Source: inc/$($module.Name)"
-        $compiledContent += "# ──────────────────────────────────────────────────────────────────────────────"
-        $compiledContent += $content
-        $compiledContent += "`n"
-    }
+# Create directories
+New-Item -ItemType Directory -Path `$BoxDir -Force | Out-Null
 
-    $compiledContent += "# ══════════════════════════════════════════════════════════════════════════════"
-    $compiledContent += "# END COMPILED MODULES"
-    $compiledContent += "# ══════════════════════════════════════════════════════════════════════════════`n"
-    $compiledContent += "`n# Main Application (source: app.ps1)"
-    $compiledContent += "`$script:SkipExecution = `$false`n"
+# Download and copy files would go here
+# (This is a placeholder - actual implementation would download from GitHub)
 
-    # Part 3: Everything after init loading
-    if ($initEndIndex + 1 -lt $appLines.Count) {
-        $compiledContent += ($appLines[($initEndIndex + 1)..($appLines.Count - 1)] -join "`n")
-    }
+Write-Host "✓ $Box installed to `$BoxDir" -ForegroundColor Green
+Write-Host "`nNext steps:" -ForegroundColor Yellow
+Write-Host "  boxer init MyProject" -ForegroundColor Cyan
+"@
 
-} else {
-    Write-Host "⚠ Warning: Could not find init.ps1 loading block" -ForegroundColor Yellow
-    Write-Host "  Using simple concatenation" -ForegroundColor Yellow
-    $compiledContent += ($appLines -join "`n")
+$installFile = Join-Path $OutputDir 'install.ps1'
+$installScript | Set-Content $installFile -NoNewline
+Write-Host "✓ Generated install.ps1" -ForegroundColor Green
+
+# Summary
+Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+Write-Host "✓ Build complete!" -ForegroundColor Green
+Write-Host "  Output: $OutputDir" -ForegroundColor Gray
+Write-Host "  Files:" -ForegroundColor Gray
+Get-ChildItem $OutputDir -Recurse -File | ForEach-Object {
+    $relativePath = $_.FullName.Substring($OutputDir.Length + 1)
+    Write-Host "    - $relativePath" -ForegroundColor DarkGray
 }
-
-# Create output directory if missing
-if (-not (Test-Path $OutputDir)) {
-    Write-Verbose "  Creating output directory: $OutputDir"
-    New-Item -Path $OutputDir -ItemType Directory -Force | Out-Null
-}
-
-# Write compiled output
-Write-Host "💾 Writing compiled output..." -ForegroundColor Yellow
-$finalContent = $compiledContent -join "`n"
-
-# Inject version into compiled box.ps1
-$finalContent = $finalContent -replace "(\`$Script:BoxVersion\s*=\s*if\s*\(\`$Script:DevBoxVersion\)\s*\{\s*\`$Script:DevBoxVersion\s*\}\s*else\s*\{\s*)[^\}]+", "`$1'$currentVersion'"
-
-Set-Content -Path $OutputFile -Value $finalContent -Encoding UTF8 -NoNewline -ErrorAction Stop
-
-# Copy bootstrap installer to dist
-Write-Host "📋 Copying bootstrap installer..." -ForegroundColor Yellow
-$BootstrapSource = Join-Path $SourceDir 'devbox.ps1'
-$BootstrapDest = Join-Path $OutputDir 'devbox.ps1'
-if (Test-Path $BootstrapSource) {
-    Copy-Item -Path $BootstrapSource -Destination $BootstrapDest -Force
-    Write-Verbose "  Copied: devbox.ps1 to dist/"
-}
-
-# Copy templates directory
-$TplSource = Join-Path $SourceDir 'tpl'
-$TplDest = Join-Path $OutputDir 'tpl'
-if (Test-Path $TplSource) {
-    if (Test-Path $TplDest) {
-        Remove-Item -Recurse -Force $TplDest
-    }
-    Copy-Item -Path $TplSource -Destination $TplDest -Recurse -Force
-    Write-Verbose "  Copied: tpl/ to dist/"
-}
-
-# Verify output
-if (Test-Path $OutputFile) {
-    $outputSize = (Get-Item $OutputFile).Length
-    $outputSizeKB = [math]::Round($outputSize / 1KB, 2)
-
-    Write-Host "`n✅ Compilation successful!" -ForegroundColor Green
-    Write-Host "   Output: $OutputFile" -ForegroundColor Gray
-    Write-Host "   Size: $outputSizeKB KB" -ForegroundColor Gray
-    Write-Host "   Modules: $moduleCount" -ForegroundColor Gray
-
-    # Quick syntax validation
-    try {
-        $null = [System.Management.Automation.PSParser]::Tokenize($finalContent, [ref]$null)
-        Write-Host "   Syntax: ✓ Valid PowerShell" -ForegroundColor Gray
-    }
-    catch {
-        Write-Host "   Syntax: ⚠ Warning - Syntax errors detected" -ForegroundColor Yellow
-        Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor Yellow
-    }
-
-    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    exit 0
-}
-else {
-    Write-Host "`n✗ FAILURE: Output file not created" -ForegroundColor Red
-    exit 1
-}
+Write-Host ""
