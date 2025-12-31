@@ -73,10 +73,10 @@ $boxContent += @"
 param(
     [Parameter(Position=0)]
     [string]`$Command,
-    
+
     [Parameter(ValueFromRemainingArguments=`$true)]
     [string[]]`$Arguments,
-    
+
     [switch]`$Version
 )
 
@@ -113,16 +113,16 @@ while (`$true) {
 foreach ($module in $modules) {
     Write-Host "   + $($module.Name)" -ForegroundColor Gray
     $boxContent += "# Source: core/$($module.Name)"
-    
+
     # Read module content and filter out dot-source lines (modules already compiled)
     $content = Get-Content $module.FullName -Raw
-    
+
     # Remove dot-source lines like `. "$script:IncDir\module.ps1"`
     $content = $content -replace '(?m)^\s*\.\s+[''"]?\$script:IncDir\\[\w.]+[''"]?\s*$', ''
-    
+
     # Remove empty lines created by filtering
     $content = $content -replace '(?m)^\s*\r?\n\r?\n\r?\n', "`n`n"
-    
+
     $boxContent += $content
     $boxContent += "`n"
 }
