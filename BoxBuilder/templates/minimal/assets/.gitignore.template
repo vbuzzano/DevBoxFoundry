@@ -1,0 +1,19 @@
+# {{BOX_NAME}} - Generated .gitignore
+
+# Build outputs
+build/
+dist/
+*.o
+*.exe
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+*.tmp
+*.log

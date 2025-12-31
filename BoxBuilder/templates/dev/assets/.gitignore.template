@@ -1,0 +1,30 @@
+# {{BOX_NAME}} - Generated .gitignore
+
+# Build outputs
+build/
+dist/
+*.o
+*.a
+*.so
+*.exe
+*.dll
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp
+*.tmp
+*.log
+*.swp
+*.bak
+
+# Dependencies
+vendor/
+node_modules/

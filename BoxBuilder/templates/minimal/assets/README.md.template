@@ -1,0 +1,15 @@
+# Project
+
+Created with {{BOX_NAME}}.
+
+## Build
+
+```bash
+make
+```
+
+## Clean
+
+```bash
+make clean
+```
