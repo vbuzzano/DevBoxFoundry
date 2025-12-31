@@ -5,11 +5,11 @@ Complete Amiga OS development kit setup for cross-compilation on Windows with VB
 ## 🚀 Quick Start
 
 ```powershell
-# Install DevBox globally (one-time setup)
-irm https://github.com/vbuzzano/AmiDevBox/raw/main/devbox.ps1 | iex
+# Install Boxing globally (one-time setup)
+irm https://github.com/vbuzzano/AmiDevBox/raw/main/install.ps1 | iex
 
 # Create and setup your project
-devbox init MyProject
+boxer init MyProject
 cd MyProject
 box install
 

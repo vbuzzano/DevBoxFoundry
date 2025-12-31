@@ -1,6 +1,8 @@
-# DevBox Foundry
+# Boxing
 
-Dev Kit
+Toolkit for creating **reproducible workspace environments** (boxes). Package tools, configurations, and workflows once (e.g., AmiDevBox, ImaMap) and reproduce identically across machines. Modular, versionable, automated.
+
+**Quick start**: `boxer init MyProject --box AmiDevBox`
 
 ## Vision
 

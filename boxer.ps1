@@ -1,30 +1,30 @@
 <#
 .SYNOPSIS
-    DevBox Bootstrap Installer & Global Setup
+    Boxing - Bootstrap Installer & Global Setup
 
 .DESCRIPTION
-    Creates or initializes a DevBox project structure for cross-platform development.
+    Creates or initializes a Box project structure for cross-platform development.
     Supports three modes:
-    - Global installation (no arguments): Install DevBox globally to PowerShell profile
-    - Init mode: Create new DevBox project
-    - Add mode: Add DevBox to existing project
+    - Global installation (no arguments): Install Boxing globally to PowerShell profile
+    - Init mode: Create new Box project
+    - Add mode: Add Box to existing project
 
     Global Installation:
-      When run without arguments via 'irm | iex', DevBox installs itself globally:
-      - Copies devbox.ps1 to PowerShell Scripts directory
-      - Injects 'devbox' and 'box' functions into PowerShell profile
+      When run without arguments via 'irm | iex', Boxing installs itself globally:
+      - Copies install.ps1 to PowerShell Scripts directory
+      - Injects 'boxer' and 'box' functions into PowerShell profile
       - Uses #region markers for clean separation (future uninstall support)
 
-    After global installation, 'devbox' and 'box' commands are available anywhere:
-      - devbox: Project creation and management
+    After global installation, 'boxer' and 'box' commands are available anywhere:
+      - boxer: Project creation and management
       - box: Smart command that finds parent .box/ directory automatically
 
     Project Operations:
-      devbox init MyProject [Description]
-      devbox add [in existing directory]
+      boxer init MyProject [Description]
+      boxer add [in existing directory]
 
     Remote installation:
-      irm https://github.com/vbuzzano/AmiDevBox/raw/main/devbox.ps1 | iex
+      irm https://github.com/vbuzzano/AmiBoxing/raw/main/install.ps1 | iex
 
 .PARAMETER Mode
     Operation mode: 'init' or 'add'. Auto-detected if not specified.
@@ -40,15 +40,15 @@
 
 .EXAMPLE
     # Global installation (first time)
-    irm https://github.com/vbuzzano/AmiDevBox/raw/main/devbox.ps1 | iex
+    irm https://github.com/vbuzzano/AmiBoxing/raw/main/install.ps1 | iex
 
 .EXAMPLE
     # After installation: Create new project
-    devbox init MyProject "My awesome project"
+    boxer init MyProject "My awesome project"
 
 .EXAMPLE
     # After installation: Add to existing directory
-    devbox add
+    boxer add
 
 .EXAMPLE
     # Use box command from any subdirectory
@@ -57,10 +57,10 @@
 
 .NOTES
     Author: ReddoC
-    Version: 0.1.0
+    Version: 2.0.0
     Requires: PowerShell 7+, Git
     Installation: Single command via irm | iex
-    Profile Integration: Uses #region devbox initialize markers
+    Profile Integration: Uses #region boxing initialize markers
 #>
 
 param(
@@ -70,10 +70,10 @@ param(
 )
 
 # Version info
-$Script:DevBoxVersion = '0.1.21'
+$Script:BoxingVersion = '2.0.0'
 
 if ($Version) {
-    Write-Host "DevBox v$Script:DevBoxVersion" -ForegroundColor Cyan
+    Write-Host "Boxing v$Script:BoxingVersion" -ForegroundColor Cyan
     exit 0
 }
 
@@ -97,14 +97,14 @@ $ProgressPreference = 'SilentlyContinue'
 # INSTALLATION DETECTION
 # ============================================================================
 
-# Check if DevBox is installed globally
-$Script:IsInstalledGlobally = Test-Path "$env:USERPROFILE\Documents\PowerShell\DevBox\devbox.ps1"
+# Check if Boxing is installed globally
+$Script:IsInstalledGlobally = Test-Path "$env:USERPROFILE\Documents\PowerShell\Boxing\install.ps1"
 $Script:HasProfileIntegration = $false
 
 if (Test-Path $PROFILE.CurrentUserAllHosts -ErrorAction SilentlyContinue) {
     $profileContent = Get-Content $PROFILE.CurrentUserAllHosts -Raw -ErrorAction SilentlyContinue
     if ($profileContent) {
-        $Script:HasProfileIntegration = $profileContent -match '#region devbox initialize'
+        $Script:HasProfileIntegration = $profileContent -match '#region boxing initialize'
     }
 }
 
@@ -114,7 +114,7 @@ if (Test-Path $PROFILE.CurrentUserAllHosts -ErrorAction SilentlyContinue) {
 
 $Script:Config = @{
     Version = '0.1.0'
-    RepositoryUrl = 'https://github.com/vbuzzano/AmiDevBox.git'
+    RepositoryUrl = 'https://github.com/vbuzzano/AmiBoxing.git'
     BoxDir = '.box'
     ConfigFile = 'box.config.psd1'
     EnvFile = '.env'
@@ -149,16 +149,16 @@ function Write-Error-Custom {
 }
 
 function Test-Prerequisites {
-    # No prerequisites for devbox init
+    # No prerequisites for Boxing init
     # (git not required for project creation)
 }
 
 function Get-RemoteDownloadUrl {
-    # Returns URL to download devbox.ps1 from GitHub (release repository)
+    # Returns URL to download Boxing.ps1 from GitHub (release repository)
     $org = 'vbuzzano'
-    $repo = 'AmiDevBox'
+    $repo = 'AmiBoxing'
     $branch = 'main'
-    return "https://github.com/$org/$repo/raw/$branch/devbox.ps1"
+    return "https://github.com/$org/$repo/raw/$branch/Boxing.ps1"
 }
 
 function Show-RemoteInstallationError {
@@ -169,8 +169,8 @@ function Show-RemoteInstallationError {
     Write-Host "  $ErrorMessage" -ForegroundColor Yellow
     Write-Host ''
     Write-Host '  Manual download:' -ForegroundColor White
-    Write-Host "    irm $(Get-RemoteDownloadUrl) -OutFile devbox.ps1" -ForegroundColor Cyan
-    Write-Host "    .\devbox.ps1 init MyProject" -ForegroundColor Cyan
+    Write-Host "    irm $(Get-RemoteDownloadUrl) -OutFile Boxing.ps1" -ForegroundColor Cyan
+    Write-Host "    .\Boxing.ps1 init MyProject" -ForegroundColor Cyan
     Write-Host ''
 }
 
@@ -185,12 +185,12 @@ function Sanitize-ProjectName {
     return $sanitized
 }
 
-function Test-ProfileHasDevBox {
+function Test-ProfileHasBoxing {
     <#
     .SYNOPSIS
-        Checks if PowerShell profile has DevBox integration
+        Checks if PowerShell profile has Boxing integration
     .OUTPUTS
-        Boolean - $true if #region devbox initialize exists in profile
+        Boolean - $true if #region Boxing initialize exists in profile
     #>
     if (-not (Test-Path $PROFILE.CurrentUserAllHosts -ErrorAction SilentlyContinue)) {
         return $false
@@ -201,7 +201,7 @@ function Test-ProfileHasDevBox {
         return $false
     }
 
-    return $profileContent -match '#region devbox initialize'
+    return $profileContent -match '#region Boxing initialize'
 }
 
 # Rollback tracking for error recovery
@@ -280,7 +280,7 @@ function Initialize-NewProject {
         # Download/copy box.ps1 from release
         Write-Step 'Downloading box.ps1'
         try {
-            $BoxUrl = 'https://github.com/vbuzzano/AmiDevBox/raw/main/box.ps1'
+            $BoxUrl = 'https://github.com/vbuzzano/AmiBoxing/raw/main/box.ps1'
             $BoxDest = Join-Path $BoxPath 'box.ps1'
 
             # Try local copy first (for development), then remote download
@@ -315,7 +315,7 @@ function Initialize-NewProject {
         # Download/copy config.psd1 from release
         Write-Step 'Downloading config.psd1'
         try {
-            $ConfigUrl = 'https://github.com/vbuzzano/AmiDevBox/raw/main/config.psd1'
+            $ConfigUrl = 'https://github.com/vbuzzano/AmiBoxing/raw/main/config.psd1'
             $ConfigDest = Join-Path $BoxPath 'config.psd1'
 
             # Try local copy first (for development), then remote download
@@ -353,8 +353,8 @@ function Initialize-NewProject {
         New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
 
         # Template source priority:
-        # 1. Local devbox/tpl/ (development mode)
-        # 2. DevBox/tpl/ (installed mode)
+        # 1. Local Boxing/tpl/ (development mode)
+        # 2. Boxing/tpl/ (installed mode)
         # 3. GitHub download (fallback)
 
         $SourceTplPath = $null
@@ -369,7 +369,7 @@ function Initialize-NewProject {
 
         # Check for global installed templates
         if (-not $SourceTplPath) {
-            $GlobalTplPath = "$env:USERPROFILE\Documents\PowerShell\DevBox\tpl"
+            $GlobalTplPath = "$env:USERPROFILE\Documents\PowerShell\Boxing\tpl"
             if (Test-Path $GlobalTplPath) {
                 $SourceTplPath = $GlobalTplPath
             }
@@ -398,7 +398,7 @@ function Initialize-NewProject {
             $ProgressPreference = 'SilentlyContinue'
             foreach ($templateFile in $TemplateFiles) {
                 try {
-                    $templateUrl = "https://github.com/vbuzzano/AmiDevBox/raw/main/tpl/$templateFile"
+                    $templateUrl = "https://github.com/vbuzzano/AmiBoxing/raw/main/tpl/$templateFile"
                     $templateDest = Join-Path $TplPath $templateFile
                     $response = Invoke-WebRequest -Uri $templateUrl -ErrorAction Stop
                     if ($response.StatusCode -eq 200) {
@@ -490,7 +490,7 @@ function Initialize-NewProject {
             }
             else {
                 Write-Host "  ⚠️  box.psd1.template not found - skipping config creation" -ForegroundColor Yellow
-                Write-Host "     You can manually create box.psd1 or run: devbox fix (future feature)" -ForegroundColor Gray
+                Write-Host "     You can manually create box.psd1 or run: Boxing fix (future feature)" -ForegroundColor Gray
             }
         }
 
@@ -522,7 +522,7 @@ function Initialize-NewProject {
 # ============================================================================
 
 function Add-ToExistingProject {
-    Write-Title 'Adding DevBox to Existing Project'
+    Write-Title 'Adding Boxing to Existing Project'
 
     $CurrentDir = Get-Location
     Write-Host "Directory: $CurrentDir" -ForegroundColor Gray
@@ -544,7 +544,7 @@ function Add-ToExistingProject {
             # Download/copy box.ps1
             Write-Step 'Downloading box.ps1'
             try {
-                $BoxUrl = 'https://github.com/vbuzzano/AmiDevBox/raw/main/box.ps1'
+                $BoxUrl = 'https://github.com/vbuzzano/AmiBoxing/raw/main/box.ps1'
                 $BoxDest = Join-Path $BoxDir 'box.ps1'
 
                 # Try local copy first (for development), then remote download
@@ -582,7 +582,7 @@ function Add-ToExistingProject {
                 $TplPath = Join-Path $BoxDir 'tpl'
                 New-Item -ItemType Directory -Path $TplPath -Force | Out-Null
 
-                $EnvPsUrl = 'https://github.com/vbuzzano/AmiDevBox/raw/main/tpl/.env.ps1'
+                $EnvPsUrl = 'https://github.com/vbuzzano/AmiBoxing/raw/main/tpl/.env.ps1'
                 $EnvPsDest = Join-Path $TplPath '.env.ps1'
 
                 # Try local copy first (for development), then remote download
@@ -640,7 +640,7 @@ function Add-ToExistingProject {
         if (-not (Test-Path $EnvPath)) {
             Write-Step 'Creating environment file'
             $EnvContent = @"
-# DevBox environment
+# Boxing environment
 # Add your custom environment variables here
 
 DefaultCPU=m68020
@@ -671,7 +671,7 @@ DefaultFPU=
 
         # Backup existing critical files ONLY if they will be overwritten
         # Currently, we only keep .env backup since others are skipped or created fresh
-        # This preserves user data when adding DevBox to existing projects
+        # This preserves user data when adding Boxing to existing projects
         $FilesToBackup = @{
             '.env' = $EnvPath  # Already backed up above if exists
         }
@@ -708,12 +708,12 @@ DefaultFPU=
                 $SettingsContent = @"
 {
   "terminal.integrated.profiles.windows": {
-    "DevBox PowerShell": {
+    "Boxing PowerShell": {
       "source": "PowerShell",
       "args": ["-NoExit", "-Command", ". ./.env.ps1"]
     }
   },
-  "terminal.integrated.defaultProfile.windows": "DevBox PowerShell",
+  "terminal.integrated.defaultProfile.windows": "Boxing PowerShell",
   "powershell.codeFormatting.preset": "OTBS",
   "[powershell]": {
     "editor.defaultFormatter": "ms-vscode.powershell",
@@ -727,7 +727,7 @@ DefaultFPU=
             }
         }
 
-        Write-Title 'DevBox Added Successfully'
+        Write-Title 'Boxing Added Successfully'
         Write-Host "  📁 Location: $CurrentDir" -ForegroundColor Cyan
         Write-Host "  🚀 Next steps:" -ForegroundColor Cyan
         Write-Host "    .\box.ps1 help" -ForegroundColor Gray
@@ -738,7 +738,7 @@ DefaultFPU=
     }
     catch {
         Write-Host ''
-        Write-Error-Custom "Adding DevBox failed: $_"
+        Write-Error-Custom "Adding Boxing failed: $_"
         Rollback-Creation
         exit 1
     }
@@ -748,58 +748,58 @@ DefaultFPU=
 # GLOBAL INSTALLATION
 # ============================================================================
 
-function Install-DevBoxGlobal {
+function Install-BoxingGlobal {
     <#
     .SYNOPSIS
-        Installs DevBox globally into PowerShell profile
+        Installs Boxing globally into PowerShell profile
     .DESCRIPTION
-        Copies devbox.ps1 to Scripts directory and injects
-        devbox/box functions into user profile.ps1 using #region markers.
-        This enables 'devbox' and 'box' commands from any location.
+        Copies Boxing.ps1 to Scripts directory and injects
+        Boxing/box functions into user profile.ps1 using #region markers.
+        This enables 'Boxing' and 'box' commands from any location.
     .NOTES
         Uses #region markers for clean separation and future uninstallation.
         Safe to run multiple times (idempotent).
     #>
 
-    Write-Title '🧙 DevBox Global Installation'
+    Write-Title '🧙 Boxing Global Installation'
     Write-Host ''
 
     try {
-        # Step 1: Create DevBox directory structure
-        # PowerShell DevBox directory is: $env:USERPROFILE\Documents\PowerShell\DevBox
-        # Contains devbox.ps1 and tpl/ subdirectory for templates
-        $DevBoxDir = "$env:USERPROFILE\Documents\PowerShell\DevBox"
-        if (-not (Test-Path $DevBoxDir)) {
-            New-Item -ItemType Directory -Path $DevBoxDir -Force | Out-Null
-            Write-Success 'Created DevBox directory'
+        # Step 1: Create Boxing directory structure
+        # PowerShell Boxing directory is: $env:USERPROFILE\Documents\PowerShell\Boxing
+        # Contains Boxing.ps1 and tpl/ subdirectory for templates
+        $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
+        if (-not (Test-Path $BoxingDir)) {
+            New-Item -ItemType Directory -Path $BoxingDir -Force | Out-Null
+            Write-Success 'Created Boxing directory'
         }
 
-        # Step 2: Download or copy devbox.ps1 to global location
+        # Step 2: Download or copy Boxing.ps1 to global location
         # When run via irm | iex, $PSCommandPath is empty - we need to download
         # When run as a local file, we can copy directly
-        $targetPath = Join-Path $DevBoxDir 'devbox.ps1'
+        $targetPath = Join-Path $BoxingDir 'Boxing.ps1'
 
         if ([string]::IsNullOrEmpty($PSCommandPath)) {
             # Running via irm | iex - download the script
-            Write-Step 'Downloading devbox.ps1 from GitHub...'
+            Write-Step 'Downloading Boxing.ps1 from GitHub...'
             $downloadUrl = Get-RemoteDownloadUrl
             try {
                 Invoke-RestMethod -Uri $downloadUrl -OutFile $targetPath -ErrorAction Stop
-                Write-Success "Downloaded devbox.ps1 to Scripts"
+                Write-Success "Downloaded Boxing.ps1 to Scripts"
             }
             catch {
-                throw "Failed to download devbox.ps1: $_"
+                throw "Failed to download Boxing.ps1: $_"
             }
         }
         else {
             # Running as local file - copy it
             Copy-Item $PSCommandPath $targetPath -Force
-            Write-Success "Installed devbox.ps1 to DevBox"
+            Write-Success "Installed Boxing.ps1 to Boxing"
         }
 
-        # Step 2.5: Download templates to DevBox/tpl/
+        # Step 2.5: Download templates to Boxing/tpl/
         Write-Step 'Downloading templates...'
-        $tplDir = Join-Path $DevBoxDir 'tpl'
+        $tplDir = Join-Path $BoxingDir 'tpl'
         if (-not (Test-Path $tplDir)) {
             New-Item -ItemType Directory -Path $tplDir -Force | Out-Null
         }
@@ -833,7 +833,7 @@ function Install-DevBoxGlobal {
             $downloadedCount = 0
             foreach ($templateFile in $templateFiles) {
                 try {
-                    $templateUrl = "https://github.com/vbuzzano/AmiDevBox/raw/main/tpl/$templateFile"
+                    $templateUrl = "https://github.com/vbuzzano/AmiBoxing/raw/main/tpl/$templateFile"
                     $templateDest = Join-Path $tplDir $templateFile
                     $ProgressPreference = 'SilentlyContinue'
                     $response = Invoke-WebRequest -Uri $templateUrl -ErrorAction Stop
@@ -857,7 +857,7 @@ function Install-DevBoxGlobal {
 
         # Step 3: Create PowerShell profile if it doesn't exist
         # $PROFILE.CurrentUserAllHosts is the profile that loads for all hosts
-        # This ensures devbox works in PowerShell console, ISE, VS Code, etc.
+        # This ensures Boxing works in PowerShell console, ISE, VS Code, etc.
         $profilePath = $PROFILE.CurrentUserAllHosts
         if (-not (Test-Path $profilePath)) {
             $profileDir = Split-Path $profilePath -Parent
@@ -872,22 +872,22 @@ function Install-DevBoxGlobal {
         # #region markers allow clean detection and future uninstallation
         # Similar to conda, pyenv, and other environment managers
         $profileContent = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
-        if ($profileContent -match '#region devbox initialize') {
-            Write-Host "  ℹ️  DevBox already configured in profile" -ForegroundColor Cyan
+        if ($profileContent -match '#region Boxing initialize') {
+            Write-Host "  ℹ️  Boxing already configured in profile" -ForegroundColor Cyan
         }
         else {
             # Step 5: Inject function wrappers into profile
-            # The devbox function calls the global script with all arguments
+            # The Boxing function calls the global script with all arguments
             # The box function searches parent directories for .box/ projects
             # Both use @args to forward all parameters transparently
             $injection = @'
 
-#region devbox initialize
-# Managed by DevBox installer - do not edit manually
-# To uninstall: run 'devbox uninstall' (Feature 007)
+#region Boxing initialize
+# Managed by Boxing installer - do not edit manually
+# To uninstall: run 'Boxing uninstall' (Feature 007)
 
-function devbox {
-    & "$env:USERPROFILE\Documents\PowerShell\DevBox\devbox.ps1" @args
+function Boxing {
+    & "$env:USERPROFILE\Documents\PowerShell\Boxing\Boxing.ps1" @args
 }
 
 function box {
@@ -906,10 +906,10 @@ function box {
     }
 
     if (-not $boxScript) {
-        Write-Host "❌ No DevBox project found" -ForegroundColor Red
+        Write-Host "❌ No Boxing project found" -ForegroundColor Red
         Write-Host ""
         Write-Host "Create a new project:" -ForegroundColor Cyan
-        Write-Host "  devbox init MyProject" -ForegroundColor White
+        Write-Host "  Boxing init MyProject" -ForegroundColor White
         return
     }
 
@@ -919,20 +919,20 @@ function box {
 '@
 
             Add-Content -Path $profilePath -Value $injection -Encoding UTF8
-            Write-Success 'Added devbox functions to profile'
+            Write-Success 'Added Boxing functions to profile'
         }
 
         # Step 6: Display success message with next steps
         # Clear instructions help users understand what just happened
         # and what they need to do next
         Write-Host ''
-        Write-Success 'DevBox installed globally'
+        Write-Success 'Boxing installed globally'
         Write-Host ''
-        Write-Host "  📍 Location: $DevBoxDir" -ForegroundColor Cyan
+        Write-Host "  📍 Location: $BoxingDir" -ForegroundColor Cyan
         Write-Host ''
         Write-Host '  Next steps:' -ForegroundColor Yellow
         Write-Host '    1. Open a new PowerShell window' -ForegroundColor White
-        Write-Host '    2. Create a project: devbox init MyProject' -ForegroundColor White
+        Write-Host '    2. Create a project: Boxing init MyProject' -ForegroundColor White
         Write-Host ''
 
         # Early return prevents the wizard from running after installation
@@ -954,23 +954,23 @@ function box {
 function Main {
     # Check if executed without arguments and not installed - trigger installation mode
     if ($Arguments.Count -eq 0 -and -not $Script:HasProfileIntegration) {
-        Install-DevBoxGlobal
+        Install-BoxingGlobal
         return
     }
 
-    # T031: Display help when devbox called with no arguments (after installation)
+    # T031: Display help when Boxing called with no arguments (after installation)
     if ($Arguments.Count -eq 0 -and $Script:HasProfileIntegration) {
         Write-Host ''
-        Write-Host "🧙 DevBox v$($Script:Config.Version)" -ForegroundColor Magenta
+        Write-Host "🧙 Boxing v$($Script:Config.Version)" -ForegroundColor Magenta
         Write-Host ''
         Write-Host 'Usage:' -ForegroundColor Cyan
-        Write-Host '  devbox init [ProjectName] [Description]    Create new DevBox project' -ForegroundColor White
-        Write-Host '  devbox add                                  Add DevBox to existing project' -ForegroundColor White
+        Write-Host '  Boxing init [ProjectName] [Description]    Create new Boxing project' -ForegroundColor White
+        Write-Host '  Boxing add                                  Add Boxing to existing project' -ForegroundColor White
         Write-Host ''
         Write-Host 'Examples:' -ForegroundColor Cyan
-        Write-Host "  devbox init MyProject                       Create project in .\MyProject\" -ForegroundColor Gray
-        Write-Host "  devbox init 'My Cool App' 'Description'     Handles spaces in names" -ForegroundColor Gray
-        Write-Host '  devbox add                                  Add to current directory' -ForegroundColor Gray
+        Write-Host "  Boxing init MyProject                       Create project in .\MyProject\" -ForegroundColor Gray
+        Write-Host "  Boxing init 'My Cool App' 'Description'     Handles spaces in names" -ForegroundColor Gray
+        Write-Host '  Boxing add                                  Add to current directory' -ForegroundColor Gray
         Write-Host ''
         Write-Host 'Box Commands (inside a project):' -ForegroundColor Cyan
         Write-Host '  box help                                    Show box command help' -ForegroundColor Gray
@@ -980,7 +980,7 @@ function Main {
     }
 
     Write-Host ''
-    Write-Host "🧿 DevBox Bootstrap v$Script:DevBoxVersion" -ForegroundColor Cyan
+    Write-Host "🧿 Boxing Bootstrap v$Script:BoxingVersion" -ForegroundColor Cyan
     Write-Host ''
 
     try {
@@ -1006,7 +1006,7 @@ function Main {
                 # Interactive mode
                 Write-Host 'What would you like to do?' -ForegroundColor Yellow
                 Write-Host "  [i] init - Create new project" -ForegroundColor White
-                Write-Host "  [a] add  - Add DevBox to existing project" -ForegroundColor White
+                Write-Host "  [a] add  - Add Boxing to existing project" -ForegroundColor White
                 $Choice = Read-Host 'Select'
 
                 if ($Choice -eq 'i') {
