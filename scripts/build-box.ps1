@@ -1,17 +1,17 @@
 <#
 .SYNOPSIS
-    Builds a distributable boxer.ps1
+    Builds a distributable box.ps1
 
 .DESCRIPTION
-    Creates a standalone boxer.ps1 that embeds:
+    Creates a standalone box.ps1 that embeds:
     - boxing.ps1 (bootstrapper)
     - core/*.ps1 (shared libraries)
-    - modules/boxer/*.ps1 (boxer commands)
+    - modules/box/*.ps1 (box commands)
     - modules/shared/pkg/*.ps1 (pkg module)
 
 .EXAMPLE
-    .\build-boxer.ps1
-    Builds to dist/boxer.ps1
+    .\build-box.ps1
+    Builds to dist/box.ps1
 #>
 
 [CmdletBinding()]
@@ -19,9 +19,9 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$OutputFile = Join-Path $RepoRoot "dist\boxer.ps1"
+$OutputFile = Join-Path $RepoRoot "dist\box.ps1"
 
-Write-Host "`n🔨 Building boxer.ps1" -ForegroundColor Cyan
+Write-Host "`n🔨 Building box.ps1" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor DarkGray
 Write-Host ""
 
@@ -38,10 +38,10 @@ $content = @()
 $content += @"
 <#
 .SYNOPSIS
-    Boxer - Global Boxing Manager
+    Box - Project Workspace Manager
 
 .DESCRIPTION
-    Standalone boxer.ps1 with embedded modules
+    Standalone box.ps1 with embedded modules
 
 .NOTES
     Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
@@ -49,6 +49,9 @@ $content += @"
 #>
 
 param(
+    [Parameter(Position=0)]
+    [string]`$Command,
+
     [Parameter(ValueFromRemainingArguments=`$true)]
     [string[]]`$Arguments
 )
@@ -56,18 +59,49 @@ param(
 `$ErrorActionPreference = 'Stop'
 
 # ============================================================================
-# EMBEDDED boxing.ps1 (bootstrapper)
+# Bootstrap - Find .box directory
+# ============================================================================
+
+`$BaseDir = Get-Location
+`$BoxDir = `$null
+
+while (`$true) {
+    `$testPath = Join-Path `$BaseDir '.box'
+    if (Test-Path `$testPath) {
+        `$BoxDir = `$testPath
+        break
+    }
+    `$parent = Split-Path `$BaseDir -Parent
+    if (-not `$parent -or `$parent -eq `$BaseDir) {
+        Write-Host "ERROR: No .box directory found" -ForegroundColor Red
+        Write-Host "Run this from a box project directory" -ForegroundColor Gray
+        exit 1
+    }
+    `$BaseDir = `$parent
+}
+
+# Set global paths
+`$script:BaseDir = `$BaseDir
+`$script:BoxDir = `$BoxDir
+`$script:VendorDir = Join-Path `$BaseDir "vendor"
+`$script:TempDir = Join-Path `$BaseDir "temp"
+`$script:StateFile = Join-Path `$BoxDir "state.json"
+
+# ============================================================================
+# EMBEDDED boxing.ps1 (bootstrapper functions)
 # ============================================================================
 
 "@
 
-# Embed boxing.ps1
+# Embed boxing.ps1 (only the functions, not the execution)
 $boxingPath = Join-Path $RepoRoot "boxing.ps1"
 if (Test-Path $boxingPath) {
-    $content += "# BEGIN boxing.ps1"
-    $content += Get-Content $boxingPath -Raw
+    $boxingContent = Get-Content $boxingPath -Raw
+    # Extract only function definitions, skip execution code
+    $content += "# BEGIN boxing.ps1 (functions only)"
+    $content += $boxingContent -replace '(?s)# Call main.*$', ''
     $content += "# END boxing.ps1"
-    Write-Host "✓ Embedded: boxing.ps1" -ForegroundColor Green
+    Write-Host "✓ Embedded: boxing.ps1 (functions)" -ForegroundColor Green
 }
 
 # Embed core/*.ps1
@@ -87,21 +121,21 @@ foreach ($file in $coreFiles) {
     Write-Host "✓ Embedded: core/$($file.Name)" -ForegroundColor Green
 }
 
-# Embed modules/boxer/*.ps1
+# Embed modules/box/*.ps1
 $content += @"
 
 # ============================================================================
-# EMBEDDED modules/boxer/*.ps1 (boxer commands)
+# EMBEDDED modules/box/*.ps1 (box commands)
 # ============================================================================
 
 "@
 
-$boxerFiles = Get-ChildItem -Path (Join-Path $RepoRoot "modules\boxer") -Filter "*.ps1" | Sort-Object Name
-foreach ($file in $boxerFiles) {
-    $content += "# BEGIN modules/boxer/$($file.Name)"
+$boxFiles = Get-ChildItem -Path (Join-Path $RepoRoot "modules\box") -Filter "*.ps1" | Sort-Object Name
+foreach ($file in $boxFiles) {
+    $content += "# BEGIN modules/box/$($file.Name)"
     $content += Get-Content $file.FullName -Raw
-    $content += "# END modules/boxer/$($file.Name)"
-    Write-Host "✓ Embedded: modules/boxer/$($file.Name)" -ForegroundColor Green
+    $content += "# END modules/box/$($file.Name)"
+    Write-Host "✓ Embedded: modules/box/$($file.Name)" -ForegroundColor Green
 }
 
 # Embed modules/shared/pkg/*.ps1
@@ -121,14 +155,29 @@ foreach ($file in $pkgFiles) {
     Write-Host "✓ Embedded: modules/shared/pkg/$($file.Name)" -ForegroundColor Green
 }
 
-# Footer - call bootstrapper
+# Footer - command dispatcher
 $content += @"
 
 # ============================================================================
-# MAIN - Invoke bootstrapper
+# MAIN - Command dispatcher
 # ============================================================================
 
-Initialize-Boxing -Arguments `$Arguments
+if (-not `$Command) {
+    `$Command = "install"
+}
+
+switch (`$Command) {
+    "install" { Invoke-Box-Install }
+    "uninstall" { Invoke-Box-Uninstall }
+    "env" { Invoke-Box-Env -Sub (`$Arguments[0]) }
+    "clean" { Invoke-Box-Clean }
+    "status" { Invoke-Box-Status }
+    default {
+        Write-Host "Unknown command: `$Command" -ForegroundColor Red
+        Write-Host "Available: install, uninstall, env, clean, status" -ForegroundColor Gray
+        exit 1
+    }
+}
 
 "@
 
