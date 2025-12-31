@@ -70,14 +70,60 @@ $boxContent += @"
     Box: $Box
 #>
 
+param(
+    [Parameter(Position=0)]
+    [string]`$Command,
+    
+    [Parameter(ValueFromRemainingArguments=`$true)]
+    [string[]]`$Arguments,
+    
+    [switch]`$Version
+)
+
 `$ErrorActionPreference = 'Stop'
+
+# ============================================================================
+# Bootstrap - Initialize paths
+# ============================================================================
+
+# Find .box directory (current or parent directories)
+`$BaseDir = Get-Location
+`$BoxDir = `$null
+
+while (`$true) {
+    `$testPath = Join-Path `$BaseDir '.box'
+    if (Test-Path `$testPath) {
+        `$BoxDir = `$testPath
+        break
+    }
+    `$parent = Split-Path `$BaseDir -Parent
+    if (-not `$parent -or `$parent -eq `$BaseDir) {
+        Write-Host "Not in a box workspace (no .box/ directory found)" -ForegroundColor Red
+        exit 1
+    }
+    `$BaseDir = `$parent
+}
+
+# ============================================================================
+# Compiled Modules
+# ============================================================================
 
 "@
 
 foreach ($module in $modules) {
     Write-Host "   + $($module.Name)" -ForegroundColor Gray
     $boxContent += "# Source: core/$($module.Name)"
-    $boxContent += Get-Content $module.FullName -Raw
+    
+    # Read module content and filter out dot-source lines (modules already compiled)
+    $content = Get-Content $module.FullName -Raw
+    
+    # Remove dot-source lines like `. "$script:IncDir\module.ps1"`
+    $content = $content -replace '(?m)^\s*\.\s+[''"]?\$script:IncDir\\[\w.]+[''"]?\s*$', ''
+    
+    # Remove empty lines created by filtering
+    $content = $content -replace '(?m)^\s*\r?\n\r?\n\r?\n', "`n`n"
+    
+    $boxContent += $content
     $boxContent += "`n"
 }
 
