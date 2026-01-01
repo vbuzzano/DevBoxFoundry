@@ -38,9 +38,17 @@ Write-Host ""
 $ReleaseName = "AmiDevBox"
 $ReleaseDescription = "Complete Amiga development environment setup system"
 $ReleaseRepo = "https://github.com/vbuzzano/AmiDevBox"
+$BoxPath = "boxers\AmiDevBox"
 
-# Verify compiled files exist
-Write-Host "🔍 Verifying compiled files..." -ForegroundColor Yellow
+# Verify box structure exists
+Write-Host "🔍 Verifying box structure..." -ForegroundColor Yellow
+
+if (-not (Test-Path $BoxPath)) {
+    Write-Host ""
+    Write-Host "❌ Error: $BoxPath not found" -ForegroundColor Red
+    Write-Host ""
+    exit 1
+}
 
 if (-not (Test-Path "dist\box.ps1")) {
     Write-Host ""
@@ -67,30 +75,31 @@ Write-Host "📦 Copying release files..." -ForegroundColor Yellow
 Write-Host "   box.ps1 (compiled, all-in-one)..." -ForegroundColor Gray
 Copy-Item -Force "dist\box.ps1" "$ReleaseDir\box.ps1"
 
-Write-Host "   devbox.ps1 (bootstrap installer)..." -ForegroundColor Gray
-Copy-Item -Force "dist\devbox.ps1" "$ReleaseDir\devbox.ps1"
+Write-Host "   config.psd1 (box configuration)..." -ForegroundColor Gray
+Copy-Item -Force "$BoxPath\config.psd1" "$ReleaseDir\config.psd1"
 
-Write-Host "   config.psd1 (system configuration)..." -ForegroundColor Gray
-Copy-Item -Force "$DevBoxDir\config.psd1" "$ReleaseDir\config.psd1"
+Write-Host "   metadata.psd1 (box metadata)..." -ForegroundColor Gray
+Copy-Item -Force "$BoxPath\metadata.psd1" "$ReleaseDir\metadata.psd1"
 
-Write-Host "   tpl/ (templates directory)..." -ForegroundColor Gray
-if (Test-Path "$DevBoxDir\tpl") {
-    # Copy entire tpl/ directory, excluding .vscode
-    $TplSource = Join-Path $DevBoxDir "tpl"
-    $TplDest = Join-Path $ReleaseDir "tpl"
+Write-Host "   assets/ (templates directory)..." -ForegroundColor Gray
+if (Test-Path "$BoxPath\assets") {
+    $AssetsSource = Join-Path $BoxPath "assets"
+    $AssetsDest = Join-Path $ReleaseDir "assets"
 
-    # Copy recursively, then remove .vscode if present
-    Copy-Item -Path $TplSource -Destination $TplDest -Recurse -Force
+    Copy-Item -Path $AssetsSource -Destination $AssetsDest -Recurse -Force
 
-    # Remove .vscode subdirectories if any
-    Get-ChildItem -Path $TplDest -Recurse -Directory -Filter ".vscode" | Remove-Item -Recurse -Force
-
-    # Verify templates were copied (dynamic discovery, no hardcoded list)
-    $templateCount = (Get-ChildItem -Path $TplDest -Filter "*.template" -File).Count
+    $templateCount = (Get-ChildItem -Path $AssetsDest -Filter "*.template" -File).Count
     if ($templateCount -eq 0) {
-        throw "Release build failed: No template files found in tpl/"
+        throw "Release build failed: No template files found in assets/"
     }
     Write-Verbose "  Copied $templateCount template files"
+}
+
+Write-Host "   workspace/ (initial project structure)..." -ForegroundColor Gray
+if (Test-Path "$BoxPath\workspace") {
+    $WorkspaceSource = Join-Path $BoxPath "workspace"
+    $WorkspaceDest = Join-Path $ReleaseDir "workspace"
+    Copy-Item -Path $WorkspaceSource -Destination $WorkspaceDest -Recurse -Force
 }
 
 # Copy root files
@@ -110,18 +119,13 @@ foreach ($file in $rootFiles) {
 }
 
 # Copy release-specific README
-Write-Host "   README.md (release version)..." -ForegroundColor Gray
-if (Test-Path "$DevBoxDir\tpl\README.release.md") {
-    Copy-Item -Force "$DevBoxDir\tpl\README.release.md" "$ReleaseDir\README.md"
+Write-Host "   README.md (box documentation)..." -ForegroundColor Gray
+if (Test-Path "$BoxPath\README.md") {
+    Copy-Item -Force "$BoxPath\README.md" "$ReleaseDir\README.md"
+} elseif (Test-Path "$BoxPath\assets\README.release.md") {
+    Copy-Item -Force "$BoxPath\assets\README.release.md" "$ReleaseDir\README.md"
 } elseif (Test-Path "README.md") {
-    # Fallback to main README if release version doesn't exist
     Copy-Item -Force "README.md" "$ReleaseDir\README.md"
-}
-
-# Copy install.ps1 if exists
-if (Test-Path "$DevBoxDir\install.ps1") {
-    Write-Host "   install.ps1..." -ForegroundColor Gray
-    Copy-Item -Force "$DevBoxDir\install.ps1" "$ReleaseDir\install.ps1"
 }
 
 Write-Host ""
