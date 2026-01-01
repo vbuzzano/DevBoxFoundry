@@ -107,6 +107,14 @@ try {
         throw "Git clone failed with exit code $LASTEXITCODE"
     }
 
+    # Clean cloned repo (keep only .git)
+    Write-Host ""
+    Write-Host "🧹 Cleaning cloned repository..." -ForegroundColor Yellow
+    Get-ChildItem -Path $TEMP_CLONE -Exclude ".git" | ForEach-Object {
+        Remove-Item -Path $_.FullName -Recurse -Force
+        Write-Host "   ✓ Removed $($_.Name)" -ForegroundColor DarkGray
+    }
+
     # Copy files from dist/release to cloned repo (excluding .git)
     Write-Host ""
     Write-Host "📋 Copying release files..." -ForegroundColor Yellow
