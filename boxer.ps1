@@ -456,21 +456,18 @@ function Initialize-NewProject {
             Write-Host "  ⚠️  main.c.template not found" -ForegroundColor Yellow
         }
 
-        # VS Code integration (always create in init mode)
+        # VS Code integration (copy from core/tpl/.vscode/)
         Write-Step 'Configuring VS Code'
+        $CoreVSCodePath = Join-Path $PSScriptRoot 'core\tpl\.vscode'
         $VSCodeDir = Join-Path $TargetDir '.vscode'
-        New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
-        Track-Creation $VSCodeDir 'directory'
 
-        $SettingsPath = Join-Path $VSCodeDir 'settings.json'
-        $SettingsTemplate = Join-Path $TplPath 'vscode-settings.json.template'
-        if (Test-Path $SettingsTemplate) {
-            Copy-Item $SettingsTemplate -Destination $SettingsPath -Force
-            Track-Creation $SettingsPath 'file'
-            Write-Success 'Created: .vscode/settings.json'
+        if (Test-Path $CoreVSCodePath) {
+            Copy-Item -Path $CoreVSCodePath -Destination $VSCodeDir -Recurse -Force
+            Track-Creation $VSCodeDir 'directory'
+            Write-Success 'Created: .vscode/ (from core/tpl/)'
         }
         else {
-            Write-Host "  ⚠️  vscode-settings.json.template not found" -ForegroundColor Yellow
+            Write-Host "  ⚠️  core/tpl/.vscode/ not found" -ForegroundColor Yellow
         }
 
         # Generate box.psd1 at root from template (if not exists)
@@ -693,37 +690,21 @@ DefaultFPU=
             Write-Host "  ⚠️ box.ps1 not found in .box/" -ForegroundColor Yellow
         }
 
-        # VS Code integration (ask if not already configured)
+        # VS Code integration (copy from core/tpl/.vscode/ without asking)
         $VSCodeDir = Join-Path $CurrentDir '.vscode'
         $SettingsPath = Join-Path $VSCodeDir 'settings.json'
 
         if (-not (Test-Path $SettingsPath)) {
-            Write-Host ''
-            $VSCodeAnswer = Read-Host 'Configure VS Code integration? [y/n]'
-            if ($VSCodeAnswer -eq 'y' -or $VSCodeAnswer -eq 'yes') {
-                Write-Step 'Configuring VS Code'
-                New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
-                Track-Creation $VSCodeDir 'directory'
+            Write-Step 'Configuring VS Code'
+            $CoreVSCodePath = Join-Path $PSScriptRoot 'core\tpl\.vscode'
 
-                $SettingsContent = @"
-{
-  "terminal.integrated.profiles.windows": {
-    "Boxing PowerShell": {
-      "source": "PowerShell",
-      "args": ["-NoExit", "-Command", ". ./.env.ps1"]
-    }
-  },
-  "terminal.integrated.defaultProfile.windows": "Boxing PowerShell",
-  "powershell.codeFormatting.preset": "OTBS",
-  "[powershell]": {
-    "editor.defaultFormatter": "ms-vscode.powershell",
-    "editor.formatOnSave": true
-  }
-}
-"@
-                Set-Content -Path $SettingsPath -Value $SettingsContent -Encoding UTF8
-                Track-Creation $SettingsPath 'file'
-                Write-Success 'Created: .vscode/settings.json'
+            if (Test-Path $CoreVSCodePath) {
+                Copy-Item -Path $CoreVSCodePath -Destination $VSCodeDir -Recurse -Force
+                Track-Creation $VSCodeDir 'directory'
+                Write-Success 'Created: .vscode/ (from core/tpl/)'
+            }
+            else {
+                Write-Host "  ⚠️  core/tpl/.vscode/ not found" -ForegroundColor Yellow
             }
         }
 

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
 int main(void) {
-    printf("Hello from {{PROJECT_NAME}}!\n");
+    printf("Hello from Amiga!\n");
     return 0;
 }

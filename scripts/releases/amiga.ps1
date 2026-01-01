@@ -81,25 +81,18 @@ Copy-Item -Force "$BoxPath\config.psd1" "$ReleaseDir\config.psd1"
 Write-Host "   metadata.psd1 (box metadata)..." -ForegroundColor Gray
 Copy-Item -Force "$BoxPath\metadata.psd1" "$ReleaseDir\metadata.psd1"
 
-Write-Host "   assets/ (templates directory)..." -ForegroundColor Gray
-if (Test-Path "$BoxPath\assets") {
-    $AssetsSource = Join-Path $BoxPath "assets"
-    $AssetsDest = Join-Path $ReleaseDir "assets"
+Write-Host "   tpl/ (template directory)..." -ForegroundColor Gray
+if (Test-Path "$BoxPath\tpl") {
+    $TplSource = Join-Path $BoxPath "tpl"
+    $TplDest = Join-Path $ReleaseDir "tpl"
 
-    Copy-Item -Path $AssetsSource -Destination $AssetsDest -Recurse -Force
+    Copy-Item -Path $TplSource -Destination $TplDest -Recurse -Force
 
-    $templateCount = (Get-ChildItem -Path $AssetsDest -Filter "*.template" -File).Count
-    if ($templateCount -eq 0) {
-        throw "Release build failed: No template files found in assets/"
+    $fileCount = (Get-ChildItem -Path $TplDest -File -Recurse).Count
+    if ($fileCount -eq 0) {
+        throw "Release build failed: No files found in tpl/"
     }
-    Write-Verbose "  Copied $templateCount template files"
-}
-
-Write-Host "   workspace/ (initial project structure)..." -ForegroundColor Gray
-if (Test-Path "$BoxPath\workspace") {
-    $WorkspaceSource = Join-Path $BoxPath "workspace"
-    $WorkspaceDest = Join-Path $ReleaseDir "workspace"
-    Copy-Item -Path $WorkspaceSource -Destination $WorkspaceDest -Recurse -Force
+    Write-Verbose "  Copied $fileCount template files"
 }
 
 # Copy root files
@@ -122,8 +115,6 @@ foreach ($file in $rootFiles) {
 Write-Host "   README.md (box documentation)..." -ForegroundColor Gray
 if (Test-Path "$BoxPath\README.md") {
     Copy-Item -Force "$BoxPath\README.md" "$ReleaseDir\README.md"
-} elseif (Test-Path "$BoxPath\assets\README.release.md") {
-    Copy-Item -Force "$BoxPath\assets\README.release.md" "$ReleaseDir\README.md"
 } elseif (Test-Path "README.md") {
     Copy-Item -Force "README.md" "$ReleaseDir\README.md"
 }

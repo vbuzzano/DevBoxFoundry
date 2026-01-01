@@ -7,5 +7,5 @@ if (Test-Path .env) {
     }
 }
 
-# add directory script top path
-$env:PATH = "$pwd\.box;$pwd\scripts;$env:PATH;"
+# Add .box and scripts to PATH
+$env:PATH = "$pwd\.box;$pwd\scripts;$env:PATH"

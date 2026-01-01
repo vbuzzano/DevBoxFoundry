@@ -695,3 +695,186 @@ function Invoke-BoxInit {
         Write-Host "  💡 All files already exist. Use 'box env update' to regenerate." -ForegroundColor Yellow
     }
 }
+
+# ============================================================================
+# TAGGED FILE UPDATE SYSTEM (with Hooks)
+# ============================================================================
+
+function Update-TaggedFiles {
+    <#
+    .SYNOPSIS
+        Updates tagged values in project files using environment variables.
+
+    .DESCRIPTION
+        Scans project files for tagged values and replaces them with current
+        environment variable values. Supports hook system for box-specific
+        replacement syntaxes.
+
+        Core syntaxes:
+        - ~value[VAR_NAME]~ : Universal tag (works in any text file)
+
+        Box-specific syntaxes can be added via hooks in:
+        boxers/<BoxName>/core/hooks.ps1
+
+    .PARAMETER Path
+        Path to file or directory to process. Defaults to current directory.
+
+    .PARAMETER Recurse
+        Process files recursively in subdirectories.
+
+    .PARAMETER ReleaseMode
+        If true, strips tags from output (for release builds).
+        If false, preserves tags for future updates.
+
+    .PARAMETER Variables
+        Hashtable of variables to use for replacement. If not provided,
+        loads from .env file.
+
+    .EXAMPLE
+        Update-TaggedFiles -Path "README.md"
+        Updates tagged values in README.md
+
+    .EXAMPLE
+        Update-TaggedFiles -Path "." -Recurse
+        Updates all tagged files in project recursively
+    #>
+    param(
+        [string]$Path = ".",
+        [switch]$Recurse,
+        [switch]$ReleaseMode,
+        [hashtable]$Variables = $null
+    )
+
+    # Load variables if not provided
+    if (-not $Variables) {
+        $Variables = Get-TemplateVariables
+        if ($Variables.Count -eq 0) {
+            Write-Verbose "No variables found in .env"
+            return
+        }
+    }
+
+    # Find files to process
+    $files = @()
+    if (Test-Path $Path -PathType Container) {
+        $files = Get-ChildItem -Path $Path -File -Recurse:$Recurse
+    } elseif (Test-Path $Path -PathType Leaf) {
+        $files = @(Get-Item $Path)
+    } else {
+        Write-Warn "Path not found: $Path"
+        return
+    }
+
+    if ($files.Count -eq 0) {
+        Write-Verbose "No files to process"
+        return
+    }
+
+    $processedCount = 0
+
+    foreach ($file in $files) {
+        # Skip binary files
+        if (-not (Test-TextFile $file.FullName)) {
+            continue
+        }
+
+        $text = Get-Content $file.FullName -Raw -Encoding UTF8
+        $originalText = $text
+
+        # Hook: Before replacement (box-specific syntaxes)
+        if (Get-Command "Hook-BeforeTemplateReplace" -ErrorAction SilentlyContinue) {
+            $text = Hook-BeforeTemplateReplace $text $Variables $ReleaseMode
+        }
+
+        # Core syntax: ~value[VAR_NAME]~
+        $text = Apply-TildeSyntax $text $Variables $ReleaseMode
+
+        # Hook: After replacement (box-specific post-processing)
+        if (Get-Command "Hook-AfterTemplateReplace" -ErrorAction SilentlyContinue) {
+            $text = Hook-AfterTemplateReplace $text $Variables $ReleaseMode
+        }
+
+        # Save if changed
+        if ($text -ne $originalText) {
+            Set-Content -Path $file.FullName -Value $text -Encoding UTF8 -NoNewline
+            Write-Verbose "Updated: $($file.Name)"
+            $processedCount++
+        }
+    }
+
+    if ($processedCount -gt 0) {
+        Write-Verbose "Updated $processedCount file(s)"
+    }
+}
+
+function Apply-TildeSyntax {
+    <#
+    .SYNOPSIS
+        Applies ~value[VAR]~ replacement syntax.
+
+    .DESCRIPTION
+        Replaces tagged values in format ~oldvalue[VAR_NAME]~
+
+        In-place mode: ~oldvalue[VAR]~ → ~newvalue[VAR]~ (preserves tags)
+        Release mode:  ~oldvalue[VAR]~ → newvalue (strips tags)
+    #>
+    param(
+        [string]$Text,
+        [hashtable]$Variables,
+        [bool]$ReleaseMode
+    )
+
+    $Text = [regex]::Replace($Text, '~([^\[~]*?)(\[[^\]]+\]~)', {
+        param($match)
+
+        $taggedVar = $match.Groups[2].Value  # [VAR_NAME]~
+        $varName = $taggedVar -replace '[\[\]~]', ''
+
+        # Find matching variable (case-insensitive)
+        $matchedKey = $Variables.Keys | Where-Object { $_ -ieq $varName } | Select-Object -First 1
+
+        if ($matchedKey) {
+            $newValue = $Variables[$matchedKey]
+
+            if ($ReleaseMode) {
+                # Release: strip tags completely
+                return $newValue
+            } else {
+                # In-place: preserve tags, update value
+                return "~$newValue$taggedVar"
+            }
+        }
+
+        return $match.Value
+    })
+
+    return $Text
+}
+
+function Test-TextFile {
+    <#
+    .SYNOPSIS
+        Tests if a file is a text file (not binary).
+    #>
+    param([string]$Path)
+
+    try {
+        $stream = [System.IO.File]::OpenRead($Path)
+        $buffer = New-Object byte[] 512
+        $read = $stream.Read($buffer, 0, 512)
+        $stream.Close()
+
+        $sample = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $read)
+
+        # If contains null bytes or control chars (except CR/LF/TAB), it's binary
+        if ($sample -match "[\x00-\x08\x0B\x0E-\x1F]" -and $sample -notmatch "\r|\n|\t") {
+            return $false
+        }
+
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+

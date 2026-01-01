@@ -1,45 +1,17 @@
 # ============================================================================
-# Box Env Module
+# Box Env Module - List subcommand
 # ============================================================================
-#
-# Handles box env command - environment variable management
 
-function Invoke-Box-Env {
-    <#
-    .SYNOPSIS
-    Manages environment variables for the project.
-
-    .PARAMETER Sub
-    Subcommand: list, update
-
-    .EXAMPLE
-    box env list
-    box env update
-    #>
-    param(
-        [string]$Sub = "list"
-    )
-
-    switch ($Sub) {
-        "list" {
-            Show-EnvList
-        }
-        "update" {
-            Generate-AllEnvFiles
-            Write-Success ".env updated"
-        }
-        default {
-            Write-Err "Unknown env subcommand: $Sub"
-            Write-Info "Use: list, update"
-        }
-    }
-}
-
-function Show-EnvList {
+function Invoke-Box-Env-List {
     <#
     .SYNOPSIS
     Displays all environment variables configured for the project.
+
+    .EXAMPLE
+    box env list
+    box env
     #>
+
     Write-Host ""
     Write-Host "Environment Variables:" -ForegroundColor Cyan
     Write-Host ""

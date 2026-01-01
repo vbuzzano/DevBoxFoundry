@@ -1,11 +1,11 @@
-# {{PROJECT_NAME}}
+# MyProject
 
-{{DESCRIPTION}}
+Amiga development project
 
 ## Project Structure
 
 ```
-{{PROJECT_NAME}}/
+MyProject/
 ├── .box/           # Boxing configuration and tooling
 │   ├── box.ps1     # Box workspace manager (all-in-one)
 │   └── config.psd1 # Package and build configuration
@@ -15,7 +15,7 @@
 ├── lib/            # Libraries
 ├── bin/            # Compiled binaries
 ├── .env            # Environment variables
-└── box.config.psd1 # Project configuration
+└── box.psd1        # Project configuration
 ```
 
 ## Getting Started
@@ -23,16 +23,13 @@
 ### Prerequisites
 
 - PowerShell 7+
-- DevBox installed globally
+- Boxing installed globally
 
 ### Quick Start
 
 ```powershell
-# View available commands
-.\box.ps1 help
-
-# Update environment and regenerate build files
-.\box.ps1 env update
+# Load environment
+box load
 
 # Build project
 make
@@ -42,39 +39,25 @@ make
 
 Environment variables are defined in `.env` file and automatically loaded by Boxing.
 
+Run `box load` to load the environment in your current session.
+
 ## Build System
 
-This project uses a Makefile-based build system. The Makefile is generated from templates and can be regenerated anytime:
-
-```powershell
-.\box.ps1 env update
-```
+This project uses a Makefile-based build system.
 
 ## Configuration
 
-Project configuration is stored in `box.config.psd1`. Modify this file to change project name, version, or build settings.
+Project configuration is stored in `box.psd1`. Modify this file to change project name, version, or build settings.
 
 ## Development
 
-### Adding Dependencies
+### Adding Packages
 
 Use Boxing package management:
 
 ```powershell
-.\box.ps1 package list    # List available packages
-.\box.ps1 package install <name>
-```
-
-### Customizing Templates
-
-Templates are stored in `.box/tpl/`. You can modify them and regenerate files:
-
-```powershell
-# Modify template
-notepad .box/tpl/Makefile.template
-
-# Regenerate
-.\box.ps1 env update
+box pkg list              # List available packages
+box pkg install <name>    # Install a package
 ```
 
 ## License
