@@ -72,7 +72,10 @@ Write-Host ""
 # Copy ONLY compiled files (no sources needed for end users)
 Write-Host "📦 Copying release files..." -ForegroundColor Yellow
 
-Write-Host "   box.ps1 (compiled, all-in-one)..." -ForegroundColor Gray
+Write-Host "   boxer.ps1 (installer)..." -ForegroundColor Gray
+Copy-Item -Force "dist\boxer.ps1" "$ReleaseDir\boxer.ps1"
+
+Write-Host "   box.ps1 (runtime)..." -ForegroundColor Gray
 Copy-Item -Force "dist\box.ps1" "$ReleaseDir\box.ps1"
 
 Write-Host "   config.psd1 (box configuration)..." -ForegroundColor Gray
