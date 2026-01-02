@@ -65,9 +65,12 @@ param(
 $boxingPath = Join-Path $RepoRoot "boxing.ps1"
 if (Test-Path $boxingPath) {
     $content += "# BEGIN boxing.ps1"
-    $content += Get-Content $boxingPath -Raw
+    # Filter out Export-ModuleMember (not valid in compiled script)
+    $boxingContent = Get-Content $boxingPath -Raw
+    $boxingContent = $boxingContent -replace '(?m)^\s*Export-ModuleMember.*$', '# Export-ModuleMember removed (compiled script)'
+    $content += $boxingContent
     $content += "# END boxing.ps1"
-    Write-Host "✓ Embedded: boxing.ps1" -ForegroundColor Green
+    Write-Host "✓ Embedded: boxing.ps1 (functions)" -ForegroundColor Green
 }
 
 # Embed core/*.ps1
