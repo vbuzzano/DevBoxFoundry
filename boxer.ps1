@@ -104,7 +104,7 @@ $Script:HasProfileIntegration = $false
 if (Test-Path $PROFILE.CurrentUserAllHosts -ErrorAction SilentlyContinue) {
     $profileContent = Get-Content $PROFILE.CurrentUserAllHosts -Raw -ErrorAction SilentlyContinue
     if ($profileContent) {
-        $Script:HasProfileIntegration = $profileContent -match '#region boxing initialize'
+        $Script:HasProfileIntegration = $profileContent -match '#region boxing'
     }
 }
 
@@ -755,27 +755,27 @@ function Install-BoxingGlobal {
             Write-Success 'Created Boxing directory'
         }
 
-        # Step 2: Download or copy Boxing.ps1 to global location
+        # Step 2: Download or copy boxer.ps1 to global location
         # When run via irm | iex, $PSCommandPath is empty - we need to download
         # When run as a local file, we can copy directly
-        $targetPath = Join-Path $BoxingDir 'Boxing.ps1'
+        $targetPath = Join-Path $BoxingDir 'boxer.ps1'
 
         if ([string]::IsNullOrEmpty($PSCommandPath)) {
             # Running via irm | iex - download the script
-            Write-Step 'Downloading Boxing.ps1 from GitHub...'
+            Write-Step 'Downloading boxer.ps1 from GitHub...'
             $downloadUrl = Get-RemoteDownloadUrl
             try {
                 Invoke-RestMethod -Uri $downloadUrl -OutFile $targetPath -ErrorAction Stop
-                Write-Success "Downloaded Boxing.ps1 to Scripts"
+                Write-Success "Downloaded boxer.ps1"
             }
             catch {
-                throw "Failed to download Boxing.ps1: $_"
+                throw "Failed to download boxer.ps1: $_"
             }
         }
         else {
             # Running as local file - copy it
             Copy-Item $PSCommandPath $targetPath -Force
-            Write-Success "Installed Boxing.ps1 to Boxing"
+            Write-Success "Installed boxer.ps1 to boxing"
         }
 
         # Step 2.5: Download templates to Boxing/tpl/
@@ -853,8 +853,8 @@ function Install-BoxingGlobal {
         # #region markers allow clean detection and future uninstallation
         # Similar to conda, pyenv, and other environment managers
         $profileContent = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
-        if ($profileContent -match '#region Boxing initialize') {
-            Write-Host "  ℹ️  Boxing already configured in profile" -ForegroundColor Cyan
+        if ($profileContent -match '#region boxing') {
+            Write-Host "  ℹ️  boxing already configured in profile" -ForegroundColor Cyan
         }
         else {
             # Step 5: Inject function wrappers into profile
@@ -863,12 +863,12 @@ function Install-BoxingGlobal {
             # Both use @args to forward all parameters transparently
             $injection = @'
 
-#region Boxing initialize
-# Managed by Boxing installer - do not edit manually
-# To uninstall: run 'Boxing uninstall' (Feature 007)
+#region boxing
+# Managed by boxing installer - do not edit manually
+# To uninstall: run 'boxer uninstall' (Feature 007)
 
-function Boxing {
-    & "$env:USERPROFILE\Documents\PowerShell\Boxing\Boxing.ps1" @args
+function boxer {
+    & "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1" @args
 }
 
 function box {
@@ -907,13 +907,13 @@ function box {
         # Clear instructions help users understand what just happened
         # and what they need to do next
         Write-Host ''
-        Write-Success 'Boxing installed globally'
+        Write-Success 'boxing installed globally'
         Write-Host ''
         Write-Host "  📍 Location: $BoxingDir" -ForegroundColor Cyan
         Write-Host ''
         Write-Host '  Next steps:' -ForegroundColor Yellow
         Write-Host '    1. Open a new PowerShell window' -ForegroundColor White
-        Write-Host '    2. Create a project: Boxing init MyProject' -ForegroundColor White
+        Write-Host '    2. Create a project: boxer init MyProject' -ForegroundColor White
         Write-Host ''
 
         # Early return prevents the wizard from running after installation
