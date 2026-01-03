@@ -85,6 +85,15 @@ $UseVSCode = $false
 
 if ($Arguments.Count -gt 0) {
     $Mode = $Arguments[0] -as [string]
+    
+    # Check for --install flag
+    if ($Mode -eq '--install') {
+        # Load init module for Install-BoxingSystem function
+        . "$PSScriptRoot\modules\boxer\init.ps1"
+        Install-BoxingSystem
+        exit 0
+    }
+    
     if ($Arguments.Count -gt 1) { $ProjectName = $Arguments[1] -as [string] }
     if ($Arguments.Count -gt 2) { $Description = $Arguments[2] -as [string] }
     if ($Arguments.Count -gt 3) { $UseVSCode = [bool]::Parse($Arguments[3] -as [string]) }

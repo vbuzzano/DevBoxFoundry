@@ -64,9 +64,9 @@ function Invoke-Boxer-Init {
         }
 
         Write-Success "Project created: $SafeName"
-        Write-Info "Next steps:"
-        Write-Info "  cd $SafeName"
-        Write-Info "  box install"
+        Write-Host "  Next steps:" -ForegroundColor Cyan
+        Write-Host "    cd $SafeName" -ForegroundColor White
+        Write-Host "    box install" -ForegroundColor White
 
     } catch {
         Write-Err "Project creation failed: $_"
@@ -75,3 +75,124 @@ function Invoke-Boxer-Init {
         }
     }
 }
+
+function Install-BoxingSystem {
+    <#
+    .SYNOPSIS
+    Installs Boxing system globally (boxer.ps1 and box.ps1).
+
+    .DESCRIPTION
+    Sets up Boxing for global use by:
+    - Creating Scripts directory in PowerShell folder
+    - Copying boxer.ps1 and box.ps1 to Scripts
+    - Creating Boxing directory for box storage
+    - Modifying PowerShell profile with boxer and box functions
+    - Avoiding duplication if already installed
+
+    .EXAMPLE
+    Install-BoxingSystem
+    #>
+
+    Write-Step "Installing Boxing system globally..."
+
+    try {
+        # Paths
+        $ScriptsDir = "$env:USERPROFILE\Documents\PowerShell\Scripts"
+        $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
+        $ProfilePath = $PROFILE.CurrentUserAllHosts
+
+        # Create Scripts directory
+        if (-not (Test-Path $ScriptsDir)) {
+            Write-Step "Creating Scripts directory..."
+            New-Item -ItemType Directory -Path $ScriptsDir -Force | Out-Null
+            Write-Success "Created: $ScriptsDir"
+        }
+
+        # Create Boxing directory
+        if (-not (Test-Path $BoxingDir)) {
+            Write-Step "Creating Boxing directory..."
+            New-Item -ItemType Directory -Path $BoxingDir -Force | Out-Null
+            Write-Success "Created: $BoxingDir"
+        }
+
+        # Copy boxer.ps1
+        $BoxerSource = Join-Path $PSScriptRoot "../../dist/boxer.ps1"
+        $BoxerDest = Join-Path $ScriptsDir "boxer.ps1"
+        if (Test-Path $BoxerSource) {
+            Copy-Item -Force $BoxerSource $BoxerDest
+            Write-Success "Installed: boxer.ps1"
+        } else {
+            # If running from install.ps1 context, use current script
+            Copy-Item -Force $PSCommandPath $BoxerDest
+            Write-Success "Installed: boxer.ps1"
+        }
+
+        # Copy box.ps1
+        $BoxSource = Join-Path $PSScriptRoot "../../dist/box.ps1"
+        $BoxDest = Join-Path $ScriptsDir "box.ps1"
+        if (Test-Path $BoxSource) {
+            Copy-Item -Force $BoxSource $BoxDest
+            Write-Success "Installed: box.ps1"
+        }
+
+        # Modify PowerShell profile
+        Write-Step "Configuring PowerShell profile..."
+
+        # Create profile directory if needed
+        $ProfileDir = Split-Path $ProfilePath -Parent
+        if (-not (Test-Path $ProfileDir)) {
+            New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
+        }
+
+        # Read existing profile or create empty
+        $ProfileContent = ""
+        if (Test-Path $ProfilePath) {
+            $ProfileContent = Get-Content $ProfilePath -Raw
+        }
+
+        # Check if #region boxing already exists
+        if ($ProfileContent -match '#region boxing') {
+            Write-Success "Profile already configured (skipping)"
+        } else {
+            # Add Boxing region to profile
+            $BoxingRegion = @"
+
+#region boxing
+function boxer {
+    `$boxerPath = "`$env:USERPROFILE\Documents\PowerShell\Scripts\boxer.ps1"
+    if (Test-Path `$boxerPath) {
+        . `$boxerPath @args
+    } else {
+        Write-Host "Error: boxer.ps1 not found at `$boxerPath" -ForegroundColor Red
+    }
+}
+
+function box {
+    `$boxPath = "`$env:USERPROFILE\Documents\PowerShell\Scripts\box.ps1"
+    if (Test-Path `$boxPath) {
+        . `$boxPath @args
+    } else {
+        Write-Host "Error: box.ps1 not found at `$boxPath" -ForegroundColor Red
+    }
+}
+#endregion boxing
+"@
+
+            # Append to profile
+            $ProfileContent += $BoxingRegion
+            Set-Content -Path $ProfilePath -Value $ProfileContent -Encoding UTF8
+            Write-Success "Profile configured with boxer and box functions"
+        }
+
+        Write-Success "Boxing system installed successfully!"
+        Write-Host ""
+        Write-Host "  Next steps:" -ForegroundColor Cyan
+        Write-Host "    1. Restart PowerShell" -ForegroundColor White
+        Write-Host "    2. Run: boxer init MyProject" -ForegroundColor White
+
+    } catch {
+        Write-Error-Custom "Installation failed: $_"
+        throw
+    }
+}
+
