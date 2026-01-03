@@ -85,7 +85,7 @@ $UseVSCode = $false
 
 if ($Arguments.Count -gt 0) {
     $Mode = $Arguments[0] -as [string]
-    
+
     # Check for --install flag
     if ($Mode -eq '--install') {
         # Load init module for Install-BoxingSystem function
@@ -93,7 +93,7 @@ if ($Arguments.Count -gt 0) {
         Install-BoxingSystem
         exit 0
     }
-    
+
     if ($Arguments.Count -gt 1) { $ProjectName = $Arguments[1] -as [string] }
     if ($Arguments.Count -gt 2) { $Description = $Arguments[2] -as [string] }
     if ($Arguments.Count -gt 3) { $UseVSCode = [bool]::Parse($Arguments[3] -as [string]) }
@@ -1034,7 +1034,7 @@ function Main {
                     Write-Error-Custom 'Box URL is required. Usage: boxer install <github-url>'
                     exit 1
                 }
-                
+
                 # Load install module
                 . "$PSScriptRoot\modules\boxer\install.ps1"
                 Install-Box -BoxUrl $ProjectName

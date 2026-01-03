@@ -72,8 +72,20 @@ Write-Host ""
 # Copy ONLY compiled files (no sources needed for end users)
 Write-Host "📦 Copying release files..." -ForegroundColor Yellow
 
-Write-Host "   install.ps1 (one-line installer)..." -ForegroundColor Gray
-Copy-Item -Force "install.ps1" "$ReleaseDir\install.ps1"
+# Generate install.ps1 from template
+Write-Host "   install.ps1 (generating from template)..." -ForegroundColor Gray
+if (-not (Test-Path "tpl\install.ps1")) {
+    Write-Host ""
+    Write-Host "❌ Error: tpl\install.ps1 not found" -ForegroundColor Red
+    Write-Host ""
+    exit 1
+}
+
+$installTemplate = Get-Content "tpl\install.ps1" -Raw
+$installTemplate = $installTemplate -replace '\{BOXING_REPO_URL\}', 'https://github.com/vbuzzano/Boxing'
+$installTemplate = $installTemplate -replace '\{BOX_NAME\}', 'AmiDevBox'
+$installTemplate = $installTemplate -replace '\{BOX_REPO_URL\}', 'https://github.com/vbuzzano/AmiDevBox'
+Set-Content "$ReleaseDir\install.ps1" $installTemplate -Encoding UTF8
 
 Write-Host "   boxer.ps1 (installer)..." -ForegroundColor Gray
 Copy-Item -Force "dist\boxer.ps1" "$ReleaseDir\boxer.ps1"
