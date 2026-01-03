@@ -164,6 +164,13 @@ function Initialize-Boxing {
     )
 
     try {
+        # Auto-installation if no arguments (pattern devbox.ps1)
+        if (-not $Arguments -or $Arguments.Count -eq 0) {
+            # In embedded dist/boxer.ps1, all functions are already loaded
+            # Just call Install-BoxingSystem directly
+            return Install-BoxingSystem
+        }
+
         # Step 1: Detect mode
         $mode = Initialize-Mode
         Write-Verbose "Mode: $mode"
