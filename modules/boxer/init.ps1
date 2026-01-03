@@ -115,25 +115,19 @@ function Install-BoxingSystem {
             Write-Success "Created: $BoxingDir"
         }
 
-        # Copy boxer.ps1
-        $BoxerSource = Join-Path $PSScriptRoot "../../dist/boxer.ps1"
-        $BoxerDest = Join-Path $ScriptsDir "boxer.ps1"
-        if (Test-Path $BoxerSource) {
-            Copy-Item -Force $BoxerSource $BoxerDest
-            Write-Success "Installed: boxer.ps1"
-        } else {
-            # If running from install.ps1 context, use current script
-            Copy-Item -Force $PSCommandPath $BoxerDest
-            Write-Success "Installed: boxer.ps1"
+        # Note: boxer.ps1 and box.ps1 should already be in Scripts\ (downloaded by install.ps1)
+        # Verify they exist
+        $BoxerPath = Join-Path $ScriptsDir "boxer.ps1"
+        $BoxPath = Join-Path $ScriptsDir "box.ps1"
+        
+        if (-not (Test-Path $BoxerPath)) {
+            throw "boxer.ps1 not found at $BoxerPath. Installation incomplete."
         }
-
-        # Copy box.ps1
-        $BoxSource = Join-Path $PSScriptRoot "../../dist/box.ps1"
-        $BoxDest = Join-Path $ScriptsDir "box.ps1"
-        if (Test-Path $BoxSource) {
-            Copy-Item -Force $BoxSource $BoxDest
-            Write-Success "Installed: box.ps1"
+        if (-not (Test-Path $BoxPath)) {
+            throw "box.ps1 not found at $BoxPath. Installation incomplete."
         }
+        
+        Write-Success "Verified: boxer.ps1 and box.ps1 present"
 
         # Modify PowerShell profile
         Write-Step "Configuring PowerShell profile..."
@@ -161,19 +155,36 @@ function Install-BoxingSystem {
 function boxer {
     `$boxerPath = "`$env:USERPROFILE\Documents\PowerShell\Scripts\boxer.ps1"
     if (Test-Path `$boxerPath) {
-        . `$boxerPath @args
+        & `$boxerPath @args
     } else {
         Write-Host "Error: boxer.ps1 not found at `$boxerPath" -ForegroundColor Red
     }
 }
 
 function box {
-    `$boxPath = "`$env:USERPROFILE\Documents\PowerShell\Scripts\box.ps1"
-    if (Test-Path `$boxPath) {
-        . `$boxPath @args
-    } else {
-        Write-Host "Error: box.ps1 not found at `$boxPath" -ForegroundColor Red
+    `$boxScript = `$null
+    `$current = (Get-Location).Path
+
+    while (`$current -ne [System.IO.Path]::GetPathRoot(`$current)) {
+        `$testPath = Join-Path `$current ".box\box.ps1"
+        if (Test-Path `$testPath) {
+            `$boxScript = `$testPath
+            break
+        }
+        `$parent = Split-Path `$current -Parent
+        if (-not `$parent) { break }
+        `$current = `$parent
     }
+
+    if (-not `$boxScript) {
+        Write-Host "❌ No box project found" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Create a new project:" -ForegroundColor Cyan
+        Write-Host "  boxer init MyProject" -ForegroundColor White
+        return
+    }
+
+    & `$boxScript @args
 }
 #endregion boxing
 "@
