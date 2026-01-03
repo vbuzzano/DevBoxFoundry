@@ -978,8 +978,8 @@ function Main {
         Test-Prerequisites
 
         # Validate mode if specified
-        if ($Mode -and $Mode -notin @('init', 'add')) {
-            Write-Error-Custom "Invalid mode: $Mode (must be 'init' or 'add')"
+        if ($Mode -and $Mode -notin @('init', 'add', 'install')) {
+            Write-Error-Custom "Invalid mode: $Mode (must be 'init', 'add', or 'install')"
             Show-RemoteInstallationError "Invalid mode parameter"
             exit 1
         }
@@ -1028,6 +1028,16 @@ function Main {
                 }
 
                 Initialize-NewProject -ProjectName $ProjectName -Description $Description -VSCode:$UseVSCode
+            }
+            'install' {
+                if (-not $ProjectName) {
+                    Write-Error-Custom 'Box URL is required. Usage: boxer install <github-url>'
+                    exit 1
+                }
+                
+                # Load install module
+                . "$PSScriptRoot\modules\boxer\install.ps1"
+                Install-Box -BoxUrl $ProjectName
             }
             'add' {
                 Add-ToExistingProject
