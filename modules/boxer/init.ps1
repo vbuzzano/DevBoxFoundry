@@ -122,10 +122,10 @@ function Install-BoxingSystem {
             Write-Success "boxer.ps1 already installed (skipping copy)"
         } else {
             Write-Step "Installing boxer.ps1..."
-            
+
             # If executed via irm|iex, $PSCommandPath is empty - download from GitHub
             if (-not $PSCommandPath -or -not (Test-Path $PSCommandPath)) {
-                $boxerUrl = "https://raw.githubusercontent.com/vbuzzano/Boxing/main/dist/boxer.ps1"
+                $boxerUrl = "https://raw.githubusercontent.com/vbuzzano/AmiDevBox/main/boxer.ps1"
                 try {
                     Invoke-RestMethod -Uri $boxerUrl -OutFile $BoxerPath
                     Write-Success "Downloaded: boxer.ps1"

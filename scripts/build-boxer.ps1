@@ -87,7 +87,7 @@ $content += @"
 # See: ~ANALYSIS-BOXER-ARCHITECTURE.md for rationale
 $coreInclude = @('ui.ps1')  # Only display functions
 
-$coreFiles = Get-ChildItem -Path (Join-Path $RepoRoot "core") -Filter "*.ps1" | 
+$coreFiles = Get-ChildItem -Path (Join-Path $RepoRoot "core") -Filter "*.ps1" |
     Where-Object { $_.Name -in $coreInclude } |
     Sort-Object Name
 

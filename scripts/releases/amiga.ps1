@@ -58,10 +58,10 @@ if (-not (Test-Path "dist\box.ps1")) {
     exit 1
 }
 
-if (-not (Test-Path "dist\devbox.ps1")) {
+if (-not (Test-Path "dist\boxer.ps1")) {
     Write-Host ""
-    Write-Host "❌ Error: dist\devbox.ps1 not found" -ForegroundColor Red
-    Write-Host "   devbox.ps1 should be in dist/ directory" -ForegroundColor Yellow
+    Write-Host "❌ Error: dist\boxer.ps1 not found" -ForegroundColor Red
+    Write-Host "   Run: .\scripts\build-boxer.ps1" -ForegroundColor Yellow
     Write-Host ""
     exit 1
 }

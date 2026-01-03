@@ -43,8 +43,8 @@ try {
 
     & $buildScript
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Build failed with exit code $LASTEXITCODE"
+    if (-not (Test-Path "dist\box.ps1")) {
+        throw "Build failed: dist\box.ps1 not created"
     }
 
     Write-Host ""
