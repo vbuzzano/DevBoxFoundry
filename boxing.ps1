@@ -168,7 +168,7 @@ function Initialize-Boxing {
         if (-not $Arguments -or $Arguments.Count -eq 0) {
             # Check if Boxing is already installed
             $BoxingInstalled = Test-Path "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
-            
+
             if (-not $BoxingInstalled) {
                 # First-time installation
                 return Install-BoxingSystem

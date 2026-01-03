@@ -21,8 +21,23 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutputFile = Join-Path $RepoRoot "dist\boxer.ps1"
 
+# Read version from config.psd1
+$ConfigPath = Join-Path $RepoRoot "boxers\AmiDevBox\config.psd1"
+$BoxVersion = "0.1.0"  # Default fallback
+if (Test-Path $ConfigPath) {
+    try {
+        $config = Import-PowerShellDataFile -Path $ConfigPath
+        if ($config.Version) {
+            $BoxVersion = $config.Version
+        }
+    } catch {
+        Write-Warning "Could not read version from config.psd1, using default: $BoxVersion"
+    }
+}
+
 Write-Host "`n🔨 Building boxer.ps1" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor DarkGray
+Write-Host "Version: $BoxVersion" -ForegroundColor Gray
 Write-Host ""
 
 # Create dist directory
@@ -45,7 +60,7 @@ $content += @"
 
 .NOTES
     Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-    Version: 1.0.0
+    Version: $BoxVersion
 #>
 
 param(
@@ -131,7 +146,12 @@ Initialize-Boxing -Arguments `$Arguments
 "@
 
 # Write output
-$content -join "`n" | Set-Content -Path $OutputFile -Encoding UTF8
+$finalContent = ($content -join "`n")
+
+# Replace version placeholder in Install-BoxingSystem function
+$finalContent = $finalContent -replace '\$NewVersion = "0\.1\.0"  # Will be replaced by build script with actual version', "`$NewVersion = `"$BoxVersion`""
+
+$finalContent | Set-Content -Path $OutputFile -Encoding UTF8
 
 Write-Host ""
 Write-Host "✓ Build complete: $OutputFile" -ForegroundColor Green
