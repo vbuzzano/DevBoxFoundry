@@ -72,6 +72,9 @@ Write-Host ""
 # Copy ONLY compiled files (no sources needed for end users)
 Write-Host "📦 Copying release files..." -ForegroundColor Yellow
 
+Write-Host "   install.ps1 (one-line installer)..." -ForegroundColor Gray
+Copy-Item -Force "install.ps1" "$ReleaseDir\install.ps1"
+
 Write-Host "   boxer.ps1 (installer)..." -ForegroundColor Gray
 Copy-Item -Force "dist\boxer.ps1" "$ReleaseDir\boxer.ps1"
 
