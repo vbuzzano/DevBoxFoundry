@@ -122,8 +122,21 @@ function Install-BoxingSystem {
             Write-Success "boxer.ps1 already installed (skipping copy)"
         } else {
             Write-Step "Installing boxer.ps1..."
-            Copy-Item -Path $PSCommandPath -Destination $BoxerPath -Force
-            Write-Success "Installed: boxer.ps1"
+            
+            # If executed via irm|iex, $PSCommandPath is empty - download from GitHub
+            if (-not $PSCommandPath -or -not (Test-Path $PSCommandPath)) {
+                $boxerUrl = "https://raw.githubusercontent.com/vbuzzano/Boxing/main/dist/boxer.ps1"
+                try {
+                    Invoke-RestMethod -Uri $boxerUrl -OutFile $BoxerPath
+                    Write-Success "Downloaded: boxer.ps1"
+                } catch {
+                    throw "Failed to download boxer.ps1 from $boxerUrl : $_"
+                }
+            } else {
+                # Local installation (running from file)
+                Copy-Item -Path $PSCommandPath -Destination $BoxerPath -Force
+                Write-Success "Installed: boxer.ps1"
+            }
         }
 
         # Modify PowerShell profile
