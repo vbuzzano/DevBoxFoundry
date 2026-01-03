@@ -97,16 +97,8 @@ function Install-BoxingSystem {
 
     try {
         # Paths
-        $ScriptsDir = "$env:USERPROFILE\Documents\PowerShell\Scripts"
         $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
         $ProfilePath = $PROFILE.CurrentUserAllHosts
-
-        # Create Scripts directory
-        if (-not (Test-Path $ScriptsDir)) {
-            Write-Step "Creating Scripts directory..."
-            New-Item -ItemType Directory -Path $ScriptsDir -Force | Out-Null
-            Write-Success "Created: $ScriptsDir"
-        }
 
         # Create Boxing directory
         if (-not (Test-Path $BoxingDir)) {
@@ -115,19 +107,24 @@ function Install-BoxingSystem {
             Write-Success "Created: $BoxingDir"
         }
 
-        # Note: boxer.ps1 and box.ps1 should already be in Scripts\ (downloaded by install.ps1)
-        # Verify they exist
-        $BoxerPath = Join-Path $ScriptsDir "boxer.ps1"
-        $BoxPath = Join-Path $ScriptsDir "box.ps1"
-        
-        if (-not (Test-Path $BoxerPath)) {
-            throw "boxer.ps1 not found at $BoxerPath. Installation incomplete."
+        # Create Boxes subdirectory
+        $BoxesDir = Join-Path $BoxingDir "Boxes"
+        if (-not (Test-Path $BoxesDir)) {
+            Write-Step "Creating Boxes directory..."
+            New-Item -ItemType Directory -Path $BoxesDir -Force | Out-Null
+            Write-Success "Created: $BoxesDir"
         }
-        if (-not (Test-Path $BoxPath)) {
-            throw "box.ps1 not found at $BoxPath. Installation incomplete."
-        }
+
+        # Copy boxer.ps1 to Boxing directory (self-installation pattern)
+        $BoxerPath = Join-Path $BoxingDir "boxer.ps1"
         
-        Write-Success "Verified: boxer.ps1 and box.ps1 present"
+        if (Test-Path $BoxerPath) {
+            Write-Success "boxer.ps1 already installed (skipping copy)"
+        } else {
+            Write-Step "Installing boxer.ps1..."
+            Copy-Item -Path $PSCommandPath -Destination $BoxerPath -Force
+            Write-Success "Installed: boxer.ps1"
+        }
 
         # Modify PowerShell profile
         Write-Step "Configuring PowerShell profile..."
@@ -153,7 +150,7 @@ function Install-BoxingSystem {
 
 #region boxing
 function boxer {
-    `$boxerPath = "`$env:USERPROFILE\Documents\PowerShell\Scripts\boxer.ps1"
+    `$boxerPath = "`$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
     if (Test-Path `$boxerPath) {
         & `$boxerPath @args
     } else {
