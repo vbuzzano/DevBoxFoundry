@@ -117,7 +117,7 @@ function Install-BoxingSystem {
 
         # Copy boxer.ps1 to Boxing directory (self-installation pattern)
         $BoxerPath = Join-Path $BoxingDir "boxer.ps1"
-        
+
         if (Test-Path $BoxerPath) {
             Write-Success "boxer.ps1 already installed (skipping copy)"
         } else {
@@ -199,7 +199,7 @@ function box {
         Write-Host "    2. Run: boxer init MyProject" -ForegroundColor White
 
     } catch {
-        Write-Error-Custom "Installation failed: $_"
+        Write-Host "Installation failed: $_" -ForegroundColor Red
         throw
     }
 }

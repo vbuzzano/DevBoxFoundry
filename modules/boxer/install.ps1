@@ -36,12 +36,17 @@ function Install-Box {
 
         # Target directory
         $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
-        $BoxDir = Join-Path $BoxingDir $BoxName
+        $BoxesDir = Join-Path $BoxingDir "Boxes"
+        $BoxDir = Join-Path $BoxesDir $BoxName
+
+        # Create Boxes directory if needed
+        if (-not (Test-Path $BoxesDir)) {
+            New-Item -ItemType Directory -Path $BoxesDir -Force | Out-Null
+        }
 
         # Check if box already installed
         if (Test-Path $BoxDir) {
-            Write-Error-Custom "Box '$BoxName' is already installed at $BoxDir"
-            return
+            throw "Box '$BoxName' is already installed at $BoxDir"
         }
 
         # Create box directory
@@ -90,12 +95,15 @@ function Install-Box {
             Write-Host "  Warning: tpl/ directory not found or empty" -ForegroundColor Yellow
         }
 
-        # Copy box.ps1 from dist
-        $BoxSource = Join-Path $PSScriptRoot "../../dist/box.ps1"
-        if (Test-Path $BoxSource) {
-            $BoxDest = Join-Path $BoxDir "box.ps1"
-            Copy-Item -Force $BoxSource $BoxDest
-            Write-Success "Copied: box.ps1"
+        # Download box.ps1 from repo
+        Write-Step "Downloading box.ps1..."
+        $BoxUrl = "https://github.com/$Owner/$Repo/raw/main/box.ps1"
+        $BoxDest = Join-Path $BoxDir "box.ps1"
+        try {
+            Invoke-RestMethod -Uri $BoxUrl -OutFile $BoxDest
+            Write-Success "Downloaded: box.ps1"
+        } catch {
+            throw "Failed to download box.ps1: $_"
         }
 
         # Create .boxer manifest
@@ -115,7 +123,7 @@ Repository=$BoxUrl
         Write-Host "    boxer init MyProject" -ForegroundColor White
 
     } catch {
-        Write-Error-Custom "Box installation failed: $_"
+        Write-Host "Box installation failed: $_" -ForegroundColor Red
 
         # Cleanup on error
         if (Test-Path $BoxDir) {
