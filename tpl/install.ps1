@@ -38,16 +38,16 @@ try {
             New-Item -ItemType Directory -Path $BoxingScriptsDir -Force | Out-Null
         }
 
-        # Download boxer.ps1 from Boxing repo
+        # Download boxer.ps1 from box repo
         Write-Host "📥 Downloading boxer.ps1..." -ForegroundColor Yellow
-        $boxerUrl = "{BOXING_REPO_URL}/raw/main/dist/boxer.ps1"
+        $boxerUrl = "{BOX_REPO_URL}/raw/main/boxer.ps1"
         Invoke-RestMethod -Uri $boxerUrl -OutFile $BoxerPath
         Write-Host "   ✓ Downloaded boxer.ps1" -ForegroundColor Green
         Write-Host ""
 
-        # Download box.ps1 from Boxing repo
+        # Download box.ps1 from box repo
         Write-Host "📥 Downloading box.ps1..." -ForegroundColor Yellow
-        $boxUrl = "{BOXING_REPO_URL}/raw/main/dist/box.ps1"
+        $boxUrl = "{BOX_REPO_URL}/raw/main/box.ps1"
         Invoke-RestMethod -Uri $boxUrl -OutFile $BoxPath
         Write-Host "   ✓ Downloaded box.ps1" -ForegroundColor Green
         Write-Host ""
