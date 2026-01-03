@@ -82,7 +82,15 @@ $content += @"
 
 "@
 
-$coreFiles = Get-ChildItem -Path (Join-Path $RepoRoot "core") -Filter "*.ps1" | Sort-Object Name
+# BOXER ONLY: Include only UI functions (shared between boxer and box)
+# Workspace-specific files (download, extract, packages, etc.) are NOT needed for boxer
+# See: ~ANALYSIS-BOXER-ARCHITECTURE.md for rationale
+$coreInclude = @('ui.ps1')  # Only display functions
+
+$coreFiles = Get-ChildItem -Path (Join-Path $RepoRoot "core") -Filter "*.ps1" | 
+    Where-Object { $_.Name -in $coreInclude } |
+    Sort-Object Name
+
 foreach ($file in $coreFiles) {
     $content += "# BEGIN core/$($file.Name)"
     $content += Get-Content $file.FullName -Raw
@@ -107,22 +115,9 @@ foreach ($file in $boxerFiles) {
     Write-Host "✓ Embedded: modules/boxer/$($file.Name)" -ForegroundColor Green
 }
 
-# Embed modules/shared/pkg/*.ps1
-$content += @"
-
-# ============================================================================
-# EMBEDDED modules/shared/pkg/*.ps1 (pkg module)
-# ============================================================================
-
-"@
-
-$pkgFiles = Get-ChildItem -Path (Join-Path $RepoRoot "modules\shared\pkg") -Filter "*.ps1" | Sort-Object Name
-foreach ($file in $pkgFiles) {
-    $content += "# BEGIN modules/shared/pkg/$($file.Name)"
-    $content += Get-Content $file.FullName -Raw
-    $content += "# END modules/shared/pkg/$($file.Name)"
-    Write-Host "✓ Embedded: modules/shared/pkg/$($file.Name)" -ForegroundColor Green
-}
+# NOTE: modules/shared/pkg/*.ps1 NOT embedded in boxer.ps1
+# Package management is for box workspaces, not for boxer (box manager)
+# See: ~ANALYSIS-BOXER-ARCHITECTURE.md
 
 # Footer - call bootstrapper
 $content += @"
