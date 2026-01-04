@@ -164,6 +164,15 @@ if (Test-Path "$BoxPath\README.md") {
     Copy-Item -Force "README.md" "$ReleaseDir\README.md"
 }
 
+# Copy install.ps1 (web installation script)
+Write-Host "   install.ps1 (web installer)..." -ForegroundColor Gray
+$InstallSource = Join-Path $BoxPath "tpl\install.ps1"
+if (Test-Path $InstallSource) {
+    Copy-Item -Force $InstallSource "$ReleaseDir\install.ps1"
+} else {
+    Write-Warning "install.ps1 not found in $BoxPath\tpl\"
+}
+
 Write-Host ""
 Write-Host "✅ Amiga release configured successfully" -ForegroundColor Green
 
