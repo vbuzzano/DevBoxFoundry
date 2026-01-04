@@ -132,3 +132,102 @@ Repository=$BoxUrl
         throw
     }
 }
+
+# ============================================================================
+# Version Detection Functions
+# ============================================================================
+
+function Get-InstalledBoxVersion {
+    <#
+    .SYNOPSIS
+    Gets the version of an installed box.
+
+    .PARAMETER BoxName
+    Name of the box to check.
+
+    .RETURNS
+    Version string if installed, $null otherwise.
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$BoxName
+    )
+
+    $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
+    $MetadataPath = Join-Path $BoxingDir "$BoxName\metadata.psd1"
+
+    if (Test-Path $MetadataPath) {
+        try {
+            $Metadata = Import-PowerShellDataFile $MetadataPath
+            return $Metadata.Version
+        } catch {
+            Write-Verbose "Failed to read metadata for ${BoxName}: $($_.Exception.Message)"
+            return $null
+        }
+    }
+
+    return $null
+}
+
+function Get-RemoteBoxVersion {
+    <#
+    .SYNOPSIS
+    Gets the version from remote metadata content.
+
+    .PARAMETER MetadataContent
+    Raw content of metadata.psd1 file.
+
+    .RETURNS
+    Version string if found, $null otherwise.
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$MetadataContent
+    )
+
+    if ($MetadataContent -match 'Version\s*=\s*"([^"]*)"') {
+        return $Matches[1]
+    }
+
+    return $null
+}
+
+function Compare-BoxVersion {
+    <#
+    .SYNOPSIS
+    Compares two semantic versions.
+
+    .PARAMETER LocalVersion
+    Installed version string.
+
+    .PARAMETER RemoteVersion
+    Remote version string.
+
+    .RETURNS
+    -1 if local > remote, 0 if equal, 1 if remote > local
+    #>
+    param(
+        [string]$LocalVersion,
+        [string]$RemoteVersion
+    )
+
+    # Not installed → update
+    if (-not $LocalVersion) { return 1 }
+
+    # Invalid remote → skip
+    if (-not $RemoteVersion) { return -1 }
+
+    try {
+        $Local = [version]$LocalVersion
+        $Remote = [version]$RemoteVersion
+
+        if ($Remote -gt $Local) { return 1 }   # Remote newer
+        if ($Remote -eq $Local) { return 0 }   # Same
+        return -1                               # Local newer
+    } catch {
+        # Fallback to string comparison if version parsing fails
+        if ($RemoteVersion -gt $LocalVersion) { return 1 }
+        if ($RemoteVersion -eq $LocalVersion) { return 0 }
+        return -1
+    }
+}
