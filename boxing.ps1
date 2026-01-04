@@ -17,6 +17,11 @@ $script:Mode = $null
 $script:LoadedModules = @{}
 $script:Commands = @{}
 
+# Embedded flag - set to $true by build process for compiled versions
+if (-not (Get-Variable -Name IsEmbedded -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:IsEmbedded = $false
+}
+
 # Detect execution mode
 function Initialize-Mode {
     # When executed via irm|iex, $MyInvocation.PSCommandPath is empty
@@ -43,6 +48,12 @@ function Initialize-Mode {
 
 # Load core libraries
 function Import-CoreLibraries {
+    # Skip if embedded version - libraries already loaded
+    if ($script:IsEmbedded) {
+        Write-Verbose "Embedded mode: core libraries already loaded"
+        return
+    }
+
     $corePath = Join-Path $script:BoxingRoot 'core'
 
     if (-not (Test-Path $corePath)) {
@@ -65,6 +76,14 @@ function Import-CoreLibraries {
 # Discover and load mode-specific modules
 function Import-ModeModules {
     param([string]$Mode)
+
+    # Skip if embedded version - modules already loaded
+    if ($script:IsEmbedded) {
+        Write-Verbose "Embedded mode: $Mode modules already loaded"
+        # Still need to register commands for embedded version
+        Register-EmbeddedCommands -Mode $Mode
+        return
+    }
 
     $modulesPath = Join-Path $script:BoxingRoot "modules\$Mode"
 
@@ -91,8 +110,35 @@ function Import-ModeModules {
     }
 }
 
+# Register embedded commands (when modules are already loaded)
+function Register-EmbeddedCommands {
+    param([string]$Mode)
+
+    # For embedded versions, register known commands
+    if ($Mode -eq 'boxer') {
+        $script:Commands['init'] = 'Invoke-Boxer-Init'
+        $script:Commands['install'] = 'Install-Box'
+        $script:Commands['list'] = 'Invoke-Boxer-List'
+        $script:Commands['version'] = 'Invoke-Boxer-Version'
+    }
+    elseif ($Mode -eq 'box') {
+        $script:Commands['install'] = 'Invoke-Box-Install'
+        $script:Commands['env'] = 'Invoke-Box-Env'
+        $script:Commands['clean'] = 'Invoke-Box-Clean'
+        $script:Commands['status'] = 'Invoke-Box-Status'
+        $script:Commands['uninstall'] = 'Invoke-Box-Uninstall'
+        $script:Commands['version'] = 'Invoke-Box-Version'
+    }
+}
+
 # Discover and load shared modules
 function Import-SharedModules {
+    # Skip if embedded version - shared modules already loaded
+    if ($script:IsEmbedded) {
+        Write-Verbose "Embedded mode: shared modules already loaded"
+        return
+    }
+
     $sharedPath = Join-Path $script:BoxingRoot 'modules\shared'
 
     if (-not (Test-Path $sharedPath)) {
@@ -167,23 +213,38 @@ function Invoke-Command {
 # Main bootstrapping function
 function Initialize-Boxing {
     param(
-        [string[]]$Arguments
+        [string[]]$Arguments = @()
     )
 
     try {
-        # Auto-installation if no arguments AND not already installed
-        if (-not $Arguments -or $Arguments.Count -eq 0) {
-            # Check if Boxing is already installed
-            $BoxingInstalled = Test-Path "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
+        # Auto-installation/update if executed via irm|iex (no $PSScriptRoot)
+        if (-not $PSScriptRoot -and $Arguments.Count -eq 0) {
+            $BoxerInstalled = "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
 
-            if (-not $BoxingInstalled) {
+            # 1. Check if already installed
+            if (Test-Path $BoxerInstalled) {
+                # 2. Compare versions
+                $InstalledContent = Get-Content $BoxerInstalled -Raw
+                $InstalledVersion = if ($InstalledContent -match 'Version:\s*(\S+)') { $Matches[1] } else { $null }
+
+                $CurrentVersion = "0.1.0"  # Will be replaced by build script
+
+                # 3. Decision: upgrade only if new version > installed version
+                try {
+                    if ($InstalledVersion -and $CurrentVersion -and ([version]$CurrentVersion -gt [version]$InstalledVersion)) {
+                        Write-Host ""
+                        Write-Host "🔄 Boxing update: $InstalledVersion → $CurrentVersion" -ForegroundColor Cyan
+                        return Install-BoxingSystem
+                    }
+                } catch {
+                    # Version parsing failed, skip update
+                }
+                # Skip if same version or downgrade
+            } else {
                 # First-time installation
                 return Install-BoxingSystem
             }
-            # If already installed, continue to show help
-        }
-
-        # Step 1: Detect mode
+        }        # Step 1: Detect mode
         $mode = Initialize-Mode
         Write-Verbose "Mode: $mode"
 
@@ -202,7 +263,11 @@ function Initialize-Boxing {
         # Step 5: Dispatch command
         if ($Arguments.Count -gt 0) {
             $command = $Arguments[0]
-            $cmdArgs = $Arguments[1..($Arguments.Count - 1)]
+            $cmdArgs = if ($Arguments.Count -gt 1) {
+                $Arguments[1..($Arguments.Count - 1)]
+            } else {
+                @()
+            }
 
             return Invoke-Command -CommandName $command -Arguments $cmdArgs
         }

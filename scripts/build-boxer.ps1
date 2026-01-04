@@ -21,23 +21,31 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutputFile = Join-Path $RepoRoot "dist\boxer.ps1"
 
-# Read version from config.psd1
-$ConfigPath = Join-Path $RepoRoot "boxers\AmiDevBox\config.psd1"
-$BoxVersion = "0.1.0"  # Default fallback
-if (Test-Path $ConfigPath) {
+# Read version from existing dist/boxer.ps1 if it exists, otherwise use default
+$BaseVersion = "1.0"
+$BuildNumber = 0
+
+if (Test-Path $OutputFile) {
     try {
-        $config = Import-PowerShellDataFile -Path $ConfigPath
-        if ($config.Version) {
-            $BoxVersion = $config.Version
+        $ExistingContent = Get-Content $OutputFile -Raw
+        # Extract version from header comment (format: "Version: x.y.z")
+        if ($ExistingContent -match 'Version:\s*(\d+)\.(\d+)\.(\d+)') {
+            $BaseVersion = "$($Matches[1]).$($Matches[2])"
+            $BuildNumber = [int]$Matches[3]
         }
     } catch {
-        Write-Warning "Could not read version from config.psd1, using default: $BoxVersion"
+        Write-Warning "Could not read existing version, using default"
     }
 }
 
+# Increment build number
+$BuildNumber++
+$BoxVersion = "$BaseVersion.$BuildNumber"
+
+Write-Host "Version: $BoxVersion (build #$BuildNumber)" -ForegroundColor Cyan
+
 Write-Host "`n🔨 Building boxer.ps1" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor DarkGray
-Write-Host "Version: $BoxVersion" -ForegroundColor Gray
 Write-Host ""
 
 # Create dist directory
@@ -73,6 +81,12 @@ param(
 # ============================================================================
 # EMBEDDED boxing.ps1 (bootstrapper)
 # ============================================================================
+
+# Flag indicating this is an embedded/compiled version
+`$script:IsEmbedded = `$true
+
+# Embedded version information (injected by build script)
+`$script:BoxerVersion = "$BoxVersion"
 
 "@
 
@@ -135,21 +149,24 @@ foreach ($file in $boxerFiles) {
 # See: ~ANALYSIS-BOXER-ARCHITECTURE.md
 
 # Footer - call bootstrapper
-$content += @"
+$content += @'
 
 # ============================================================================
 # MAIN - Invoke bootstrapper
 # ============================================================================
 
-Initialize-Boxing -Arguments `$Arguments
+# Ensure Arguments is an array (can be null in irm|iex context)
+if (-not $Arguments) { $Arguments = @() }
+Initialize-Boxing -Arguments $Arguments
 
-"@
+'@
 
 # Write output
 $finalContent = ($content -join "`n")
 
-# Replace version placeholder in Install-BoxingSystem function
+# Replace version placeholders in embedded code
 $finalContent = $finalContent -replace '\$NewVersion = "0\.1\.0"  # Will be replaced by build script with actual version', "`$NewVersion = `"$BoxVersion`""
+$finalContent = $finalContent -replace '\$CurrentVersion = "0\.1\.0"  # Will be replaced by build script', "`$CurrentVersion = `"$BoxVersion`""
 
 $finalContent | Set-Content -Path $OutputFile -Encoding UTF8
 

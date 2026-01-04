@@ -26,7 +26,8 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$DevBoxDir,
 
-    [string]$Version = "0.1.0"
+    [Parameter(Mandatory=$true)]
+    [string]$BoxerVersion
 )
 
 $ErrorActionPreference = "Stop"
@@ -89,8 +90,41 @@ Copy-Item -Force "dist\box.ps1" "$ReleaseDir\box.ps1"
 Write-Host "   config.psd1 (box configuration)..." -ForegroundColor Gray
 Copy-Item -Force "$BoxPath\config.psd1" "$ReleaseDir\config.psd1"
 
+# Read EXISTING release metadata to preserve incremented version
+$existingVersion = "1.0.0"
+$metadataPath = "$ReleaseDir\metadata.psd1"
+if (Test-Path $metadataPath) {
+    $existingContent = Get-Content $metadataPath -Raw
+    if ($existingContent -match 'Version\s*=\s*"([^"]*)"') {
+        $existingVersion = $Matches[1]
+    }
+}
+
 Write-Host "   metadata.psd1 (box metadata)..." -ForegroundColor Gray
 Copy-Item -Force "$BoxPath\metadata.psd1" "$ReleaseDir\metadata.psd1"
+
+# Update metadata.psd1 with current boxer version AND auto-increment build number
+Write-Host "   metadata.psd1 (updating BoxerVersion + incrementing build)..." -ForegroundColor Gray
+$metadataContent = Get-Content $metadataPath -Raw
+
+# Increment build number from EXISTING version (not source)
+if ($existingVersion -match '(\d+)\.(\d+)\.(\d+)') {
+    $major = $Matches[1]
+    $minor = $Matches[2]
+    $build = [int]$Matches[3]
+    $build++
+    $newVersion = "$major.$minor.$build"
+    Write-Host "      Version: $existingVersion → $newVersion" -ForegroundColor DarkGray
+} else {
+    $newVersion = "1.0.1"
+    Write-Host "      Version: (first release, using 1.0.1)" -ForegroundColor Yellow
+}
+
+# Apply all updates
+$metadataContent = $metadataContent -replace '(Version\s*=\s*")[^"]*', "`${1}$newVersion"
+$metadataContent = $metadataContent -replace '(BoxerVersion\s*=\s*")[^"]*', "`${1}$BoxerVersion"
+$metadataContent = $metadataContent -replace '(BuildDate\s*=\s*")[^"]*', "`${1}$(Get-Date -Format 'yyyy-MM-dd')"
+$metadataContent | Set-Content $metadataPath -Encoding UTF8
 
 Write-Host "   tpl/ (template directory)..." -ForegroundColor Gray
 if (Test-Path "$BoxPath\tpl") {
@@ -133,10 +167,14 @@ if (Test-Path "$BoxPath\README.md") {
 Write-Host ""
 Write-Host "✅ Amiga release configured successfully" -ForegroundColor Green
 
+# Read final metadata to return
+$finalMetadata = Import-PowerShellDataFile $metadataPath
+
 # Return metadata
 [PSCustomObject]@{
     Name = $ReleaseName
     Description = $ReleaseDescription
     Repository = $ReleaseRepo
-    Version = $Version
+    Version = $finalMetadata.Version
+    BoxerVersion = $finalMetadata.BoxerVersion
 }

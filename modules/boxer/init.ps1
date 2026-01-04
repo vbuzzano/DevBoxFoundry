@@ -151,6 +151,11 @@ function Install-BoxingSystem {
         $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
         $ProfilePath = $PROFILE.CurrentUserAllHosts
 
+        # Fallback if PROFILE is not set (rare but possible in some contexts)
+        if (-not $ProfilePath) {
+            $ProfilePath = "$env:USERPROFILE\Documents\PowerShell\profile.ps1"
+        }
+
         # Create Boxing directory
         if (-not (Test-Path $BoxingDir)) {
             Write-Step "Creating Boxing directory..."
@@ -375,7 +380,10 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
             & $boxScript @args
         }
 
-        Write-Success "✓ Boxing functions loaded (boxer, box)"
+        # Only show "functions loaded" message on first install
+        if (-not $BoxerAlreadyInstalled) {
+            Write-Success "✓ Boxing functions loaded (boxer, box)"
+        }
 
         Write-Success "Boxing system installed successfully!"
         Write-Host ""

@@ -19,7 +19,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$VERSION = "0.1.0"
 $DIST_DIR = "dist"
 $RELEASE_DIR = "$DIST_DIR\release"
 $DEVBOX_DIR = "devbox"
@@ -32,16 +31,35 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 Write-Host ""
 
 try {
-    # Step 1: Build box.ps1 (always build before dist)
+    # Step 1: Build boxer.ps1 (increment version)
+    Write-Host "🔨 Building boxer.ps1..." -ForegroundColor Cyan
+    Write-Host ""
+
+    $buildBoxerScript = "scripts\build-boxer.ps1"
+    if (-not (Test-Path $buildBoxerScript)) {
+        throw "Build script not found: $buildBoxerScript"
+    }
+
+    & $buildBoxerScript
+
+    if (-not (Test-Path "dist\boxer.ps1")) {
+        throw "Build failed: dist\boxer.ps1 not created"
+    }
+
+    Write-Host ""
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host ""
+
+    # Step 2: Build box.ps1 (always build before dist)
     Write-Host "🔨 Building box.ps1..." -ForegroundColor Cyan
     Write-Host ""
 
-    $buildScript = "scripts\build-box.ps1"
-    if (-not (Test-Path $buildScript)) {
-        throw "Build script not found: $buildScript"
+    $buildBoxScript = "scripts\build-box.ps1"
+    if (-not (Test-Path $buildBoxScript)) {
+        throw "Build script not found: $buildBoxScript"
     }
 
-    & $buildScript
+    & $buildBoxScript
 
     if (-not (Test-Path "dist\box.ps1")) {
         throw "Build failed: dist\box.ps1 not created"
@@ -51,7 +69,7 @@ try {
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host ""
 
-    # Step 2: Verify release script exists
+    # Step 3: Verify release script exists
     if (-not (Test-Path $RELEASE_SCRIPT)) {
         Write-Host "❌ Error: Release script not found: $RELEASE_SCRIPT" -ForegroundColor Red
         $available = Get-ChildItem scripts\releases\*.ps1 -ErrorAction SilentlyContinue | ForEach-Object { $_.BaseName }
@@ -68,6 +86,16 @@ try {
         $gitBackup = Join-Path $env:TEMP "devbox_git_$(Get-Random)"
         Move-Item -Path $GIT_DIR -Destination $gitBackup -Force
         Write-Verbose "  Backed up to: $gitBackup"
+    }
+
+    # Preserve existing metadata.psd1 to track version increments
+    $metadataBackup = $null
+    $metadataFile = Join-Path $RELEASE_DIR "metadata.psd1"
+    if (Test-Path $metadataFile) {
+        Write-Host "📦 Preserving existing metadata.psd1..." -ForegroundColor Yellow
+        $metadataBackup = Join-Path $env:TEMP "devbox_metadata_$(Get-Random).psd1"
+        Copy-Item -Path $metadataFile -Destination $metadataBackup -Force
+        Write-Verbose "  Backed up to: $metadataBackup"
     }
 
     # Clean and recreate release directory
@@ -87,17 +115,37 @@ try {
         Write-Host "✅ .git repository restored" -ForegroundColor Green
     }
 
+    # Restore metadata.psd1 temporarily for version tracking
+    if ($metadataBackup -and (Test-Path $metadataBackup)) {
+        Copy-Item -Path $metadataBackup -Destination $metadataFile -Force
+        Write-Verbose "  Metadata backup restored for version tracking"
+    }
+
+    # Extract boxer version from dist/boxer.ps1
+    $BoxerVersion = "0.1.0"
+    if (Test-Path "dist\boxer.ps1") {
+        $BoxerContent = Get-Content "dist\boxer.ps1" -Raw
+        if ($BoxerContent -match 'Version:\s*(\d+\.\d+\.\d+)') {
+            $BoxerVersion = $Matches[1]
+        }
+    }
+
     # Call release-specific configuration script
     Write-Host ""
     Write-Host "⚙️  Executing $Release release configuration..." -ForegroundColor Cyan
-    $releaseMetadata = & $RELEASE_SCRIPT -ReleaseDir $RELEASE_DIR -DevBoxDir $DEVBOX_DIR -Version $VERSION
+    $releaseMetadata = & $RELEASE_SCRIPT -ReleaseDir $RELEASE_DIR -DevBoxDir $DEVBOX_DIR -BoxerVersion $BoxerVersion
+
+    # Cleanup metadata backup
+    if ($metadataBackup -and (Test-Path $metadataBackup)) {
+        Remove-Item -Force $metadataBackup -ErrorAction SilentlyContinue
+    }
 
     Write-Host ""
     if ($releaseMetadata) {
-        Write-Host "✅ $($releaseMetadata.Name) v$VERSION ready in $RELEASE_DIR" -ForegroundColor Green
+        Write-Host "✅ $($releaseMetadata.Name) v$($releaseMetadata.Version) (core $BoxerVersion) ready in $RELEASE_DIR" -ForegroundColor Green
     }
     else {
-        Write-Host "✅ Release v$VERSION ready in $RELEASE_DIR" -ForegroundColor Green
+        Write-Host "✅ Release ready in $RELEASE_DIR" -ForegroundColor Green
     }
 
     Write-Host ""

@@ -167,6 +167,25 @@ function Ask-Path {
 # Display Functions
 # ============================================================================
 
+function Show-Help {
+    Write-Host ""
+    Write-Host "Boxing - Reproducible Development Environment Manager" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Commands:" -ForegroundColor Yellow
+    if ($script:Mode -eq 'boxer') {
+        Write-Host "  boxer init <name>     Create a new Box project" -ForegroundColor White
+        Write-Host "  boxer list            List available Box types" -ForegroundColor White
+        Write-Host "  boxer install <url>   Install a Box from GitHub" -ForegroundColor White
+    } else {
+        Write-Host "  box install           Install workspace packages" -ForegroundColor White
+        Write-Host "  box status            Show installation status" -ForegroundColor White
+        Write-Host "  box env list          List environment variables" -ForegroundColor White
+        Write-Host "  box clean             Clean installation" -ForegroundColor White
+        Write-Host "  box uninstall         Remove all packages" -ForegroundColor White
+    }
+    Write-Host ""
+}
+
 function Show-List {
     Write-Host ""
     Write-Host "Installed Components:" -ForegroundColor Cyan

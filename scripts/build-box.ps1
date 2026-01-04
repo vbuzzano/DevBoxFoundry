@@ -31,6 +31,15 @@ if (-not (Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 }
 
+# Read boxer version to embed in box.ps1
+$BoxerVersion = "1.0.0"
+if (Test-Path "dist\boxer.ps1") {
+    $boxerContent = Get-Content "dist\boxer.ps1" -Raw -ErrorAction SilentlyContinue
+    if ($boxerContent -match 'Version:\s*(\d+\.\d+\.\d+)') {
+        $BoxerVersion = $Matches[1]
+    }
+}
+
 # Build content
 $content = @()
 
@@ -45,7 +54,7 @@ $content += @"
 
 .NOTES
     Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-    Version: 1.0.0
+    Version: $BoxerVersion
 #>
 
 param(
@@ -61,6 +70,9 @@ param(
 # ============================================================================
 # Bootstrap - Find .box directory
 # ============================================================================
+
+# Embedded version information (injected by build script)
+`$script:BoxerVersion = "$BoxerVersion"
 
 `$BaseDir = Get-Location
 `$BoxDir = `$null
