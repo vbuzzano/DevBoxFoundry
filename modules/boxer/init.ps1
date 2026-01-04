@@ -8,10 +8,10 @@ function Get-InstalledVersion {
     <#
     .SYNOPSIS
     Gets the version from a metadata.psd1 file.
-    
+
     .PARAMETER MetadataPath
     Path to metadata.psd1 file
-    
+
     .OUTPUTS
     Version string (e.g., "1.0.0") or $null if not found
     #>
@@ -19,11 +19,11 @@ function Get-InstalledVersion {
         [Parameter(Mandatory=$true)]
         [string]$MetadataPath
     )
-    
+
     if (-not (Test-Path $MetadataPath)) {
         return $null
     }
-    
+
     try {
         $metadata = Import-PowerShellDataFile -Path $MetadataPath -ErrorAction Stop
         return $metadata.Version
@@ -36,7 +36,7 @@ function Compare-Version {
     <#
     .SYNOPSIS
     Compares two version strings.
-    
+
     .OUTPUTS
     -1 if v1 < v2, 0 if equal, 1 if v1 > v2
     #>
@@ -44,7 +44,7 @@ function Compare-Version {
         [string]$Version1,
         [string]$Version2
     )
-    
+
     try {
         $v1 = [version]$Version1
         $v2 = [version]$Version2
@@ -170,16 +170,16 @@ function Install-BoxingSystem {
         $BoxerPath = Join-Path $BoxingDir "boxer.ps1"
         $BoxerMetadataPath = Join-Path $BoxingDir "boxer-metadata.psd1"
         $BoxerAlreadyInstalled = Test-Path $BoxerPath
-        
+
         # Always set source repo for AmiDevBox release (hardcoded in dist build)
         $SourceRepo = "AmiDevBox"
-        
+
         # Get versions for comparison
         $InstalledVersion = Get-InstalledVersion -MetadataPath $BoxerMetadataPath
-        
+
         # Get new version from embedded metadata (this script is the new version)
         $NewVersion = "0.1.0"  # Will be replaced by build script with actual version
-        
+
         # Determine if update is needed
         $NeedsUpdate = $false
         if (-not $BoxerAlreadyInstalled) {
@@ -196,7 +196,7 @@ function Install-BoxingSystem {
             # If executed via irm|iex, $PSCommandPath is empty - download from GitHub
             if (-not $PSCommandPath -or -not (Test-Path $PSCommandPath)) {
                 $boxerUrl = "https://raw.githubusercontent.com/vbuzzano/AmiDevBox/main/boxer.ps1"
-                
+
                 try {
                     Invoke-RestMethod -Uri $boxerUrl -OutFile $BoxerPath
                     Write-Success "Downloaded: boxer.ps1"
@@ -208,7 +208,7 @@ function Install-BoxingSystem {
                 Copy-Item -Path $PSCommandPath -Destination $BoxerPath -Force
                 Write-Success "Installed: boxer.ps1"
             }
-            
+
             # Save metadata with version
             $BoxerMetadata = @"
 @{
@@ -419,16 +419,16 @@ function Install-CurrentBox {
 
         # Base URL for downloads
         $BaseUrl = "https://raw.githubusercontent.com/vbuzzano/$BoxName/main"
-        
+
         # Get installed version
         $InstalledVersion = Get-InstalledVersion -MetadataPath $BoxMetadataPath
-        
+
         # Get remote version from GitHub
         $RemoteVersion = $null
         try {
             $RemoteMetadataUrl = "$BaseUrl/metadata.psd1"
             $RemoteMetadataContent = Invoke-RestMethod -Uri $RemoteMetadataUrl -ErrorAction Stop
-            
+
             # Parse version from downloaded content
             if ($RemoteMetadataContent -match 'Version\s*=\s*"([^"]+)"') {
                 $RemoteVersion = $Matches[1]
@@ -436,7 +436,7 @@ function Install-CurrentBox {
         } catch {
             Write-Warn "Could not fetch remote version, proceeding with install"
         }
-        
+
         # Determine if update is needed
         $NeedsUpdate = $false
         if (-not (Test-Path $BoxDir)) {
@@ -452,7 +452,7 @@ function Install-CurrentBox {
             Write-Success "$BoxName already installed (v$InstalledVersion)"
             return
         }
-        
+
         if (-not $NeedsUpdate) {
             return
         }
