@@ -34,18 +34,24 @@ Write-Host ""
 
 try {
     # Step 1: Build distribution (calls build-box.ps1 automatically)
-    Write-Host "📦 Building distribution..." -ForegroundColor Cyan
-    Write-Host ""
+    # Skip build if dist/ exists (developer can delete dist/ to force rebuild)
+    if (-not (Test-Path "dist")) {
+        Write-Host "📦 Building distribution..." -ForegroundColor Cyan
+        Write-Host ""
 
-    $distScript = "scripts\dist.ps1"
-    if (-not (Test-Path $distScript)) {
-        throw "Distribution script not found: $distScript"
-    }
+        $distScript = "scripts\dist.ps1"
+        if (-not (Test-Path $distScript)) {
+            throw "Distribution script not found: $distScript"
+        }
 
-    & $distScript -Release $Release
+        & $distScript -Release $Release
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Distribution build failed with exit code $LASTEXITCODE"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Distribution build failed with exit code $LASTEXITCODE"
+        }
+    } else {
+        Write-Host "📦 Using existing dist/ (delete to force rebuild)" -ForegroundColor Gray
+        Write-Host ""
     }
 
     Write-Host ""
