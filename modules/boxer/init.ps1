@@ -465,6 +465,15 @@ function Install-CurrentBox {
             Write-Warn "metadata.psd1 not found (optional)"
         }
 
+        # Download env.ps1 (environment configuration)
+        Write-Step "Downloading env.ps1..."
+        try {
+            Invoke-RestMethod -Uri "$BaseUrl/env.ps1" -OutFile (Join-Path $BoxDir "env.ps1")
+            Write-Success "Downloaded: env.ps1"
+        } catch {
+            Write-Warn "env.ps1 not found (optional)"
+        }
+
         # Download tpl/ directory (FILES ONLY, no subdirectories)
         Write-Step "Downloading templates..."
         $TplDir = Join-Path $BoxDir "tpl"
