@@ -182,8 +182,8 @@ function Install-BoxingSystem {
         # Get versions for comparison
         $InstalledVersion = Get-InstalledVersion -MetadataPath $BoxerMetadataPath
 
-        # Get new version from embedded metadata (this script is the new version)
-        $NewVersion = "0.1.0"  # Will be replaced by build script with actual version
+        # Get new version via core API (works in all modes)
+        $NewVersion = Get-BoxerVersion
 
         # Determine if update is needed
         $NeedsUpdate = $false

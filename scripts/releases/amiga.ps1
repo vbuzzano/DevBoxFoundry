@@ -85,7 +85,6 @@ if (-not (Test-Path "dist\boxer.ps1")) {
 Copy-Item -Force "dist\boxer.ps1" "$ReleaseDir\boxer.ps1"
 
 Write-Host "   box.ps1 (runtime)..." -ForegroundColor Gray
-Write-Host "   box.ps1 (runtime)..." -ForegroundColor Gray
 Copy-Item -Force "dist\box.ps1" "$ReleaseDir\box.ps1"
 
 Write-Host "   config.psd1 (box configuration)..." -ForegroundColor Gray
@@ -94,12 +93,12 @@ Copy-Item -Force "$BoxPath\config.psd1" "$ReleaseDir\config.psd1"
 Write-Host "   env.ps1 (environment configuration)..." -ForegroundColor Gray
 Copy-Item -Force "$BoxPath\env.ps1" "$ReleaseDir\env.ps1"
 
-# Read EXISTING release metadata to preserve incremented version
+# Read version from SOURCE metadata (boxers/AmiDevBox/metadata.psd1) - survives Remove-Item dist
+$sourceMetadataPath = "$BoxPath\metadata.psd1"
 $existingVersion = "1.0.0"
-$metadataPath = "$ReleaseDir\metadata.psd1"
-if (Test-Path $metadataPath) {
-    $existingContent = Get-Content $metadataPath -Raw
-    if ($existingContent -match 'Version\s*=\s*"([^"]*)"') {
+if (Test-Path $sourceMetadataPath) {
+    $sourceContent = Get-Content $sourceMetadataPath -Raw
+    if ($sourceContent -match 'Version\s*=\s*"([^"]*)"') {
         $existingVersion = $Matches[1]
     }
 }
@@ -109,6 +108,7 @@ Copy-Item -Force "$BoxPath\metadata.psd1" "$ReleaseDir\metadata.psd1"
 
 # Update metadata.psd1 with current boxer version AND auto-increment build number
 Write-Host "   metadata.psd1 (updating BoxerVersion + incrementing build)..." -ForegroundColor Gray
+$metadataPath = "$ReleaseDir\metadata.psd1"
 $metadataContent = Get-Content $metadataPath -Raw
 
 # Increment build number from EXISTING version (not source)
@@ -129,6 +129,12 @@ $metadataContent = $metadataContent -replace '(Version\s*=\s*")[^"]*', "`${1}$ne
 $metadataContent = $metadataContent -replace '(BoxerVersion\s*=\s*")[^"]*', "`${1}$BoxerVersion"
 $metadataContent = $metadataContent -replace '(BuildDate\s*=\s*")[^"]*', "`${1}$(Get-Date -Format 'yyyy-MM-dd')"
 $metadataContent | Set-Content $metadataPath -Encoding UTF8
+
+# Update SOURCE metadata with incremented version (persist for next build)
+Write-Host "   Updating source metadata with new version: $newVersion" -ForegroundColor DarkGray
+$sourceContent = Get-Content $sourceMetadataPath -Raw
+$sourceContent = $sourceContent -replace '(Version\s*=\s*")[^"]*', "`${1}$newVersion"
+$sourceContent | Set-Content $sourceMetadataPath -Encoding UTF8
 
 Write-Host "   tpl/ (template directory)..." -ForegroundColor Gray
 if (Test-Path "$BoxPath\tpl") {
@@ -166,15 +172,6 @@ if (Test-Path "$BoxPath\README.md") {
     Copy-Item -Force "$BoxPath\README.md" "$ReleaseDir\README.md"
 } elseif (Test-Path "README.md") {
     Copy-Item -Force "README.md" "$ReleaseDir\README.md"
-}
-
-# Copy install.ps1 (web installation script)
-Write-Host "   install.ps1 (web installer)..." -ForegroundColor Gray
-$InstallSource = Join-Path $BoxPath "tpl\install.ps1"
-if (Test-Path $InstallSource) {
-    Copy-Item -Force $InstallSource "$ReleaseDir\install.ps1"
-} else {
-    Write-Warning "install.ps1 not found in $BoxPath\tpl\"
 }
 
 Write-Host ""

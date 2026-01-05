@@ -227,14 +227,22 @@ function Initialize-Boxing {
                 $InstalledContent = Get-Content $BoxerInstalled -Raw
                 $InstalledVersion = if ($InstalledContent -match 'Version:\s*(\S+)') { $Matches[1] } else { $null }
 
-                $CurrentVersion = "0.1.0"  # Will be replaced by build script
+                # Get current version via core API (works in all modes)
+                $CurrentVersion = Get-BoxerVersion
 
                 # 3. Decision: upgrade only if new version > installed version
                 try {
                     if ($InstalledVersion -and $CurrentVersion -and ([version]$CurrentVersion -gt [version]$InstalledVersion)) {
                         Write-Host ""
-                        Write-Host "🔄 Boxing update: $InstalledVersion → $CurrentVersion" -ForegroundColor Cyan
+                        Write-Host "🔄 Boxer update: $InstalledVersion → $CurrentVersion" -ForegroundColor Cyan
                         Install-BoxingSystem | Out-Null
+                        return
+                    } elseif ($InstalledVersion -and $CurrentVersion) {
+                        # Already up-to-date or newer installed
+                        Write-Host "✓ Boxer already up-to-date (v$InstalledVersion)" -ForegroundColor Green
+                        # Check if box needs update (Install-BoxingSystem handles this)
+                        Install-BoxingSystem | Out-Null
+                        return
                     }
                 } catch {
                     # Version parsing failed, skip update
@@ -242,6 +250,7 @@ function Initialize-Boxing {
             } else {
                 # First-time installation
                 Install-BoxingSystem | Out-Null
+                return
             }
         }        # Step 1: Detect mode
         $mode = Initialize-Mode

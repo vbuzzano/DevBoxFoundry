@@ -26,7 +26,13 @@ $GIT_DIR = "$RELEASE_DIR\.git"
 $RELEASE_SCRIPT = "scripts\releases\$Release.ps1"
 
 Write-Host ""
-Write-Host "🚀 Building DevBoxFoundry release: $Release v$VERSION" -ForegroundColor Cyan
+Write-Host "🚀 Building DevBoxFoundry release: $Release v" -ForegroundColor Cyan -NoNewline
+if (Test-Path "boxer.version") {
+    $BoxerVersion = (Get-Content "boxer.version" -Raw).Trim()
+    Write-Host $BoxerVersion -ForegroundColor Cyan
+} else {
+    Write-Host ""
+}
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
 Write-Host ""
 

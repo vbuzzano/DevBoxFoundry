@@ -21,15 +21,16 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutputFile = Join-Path $RepoRoot "dist\boxer.ps1"
 
-# Read version from existing dist/boxer.ps1 if it exists, otherwise use default
+# Read version from SOURCE file (boxer.version) - survives Remove-Item dist
+$VersionFile = Join-Path $RepoRoot "boxer.version"
 $BaseVersion = "1.0"
 $BuildNumber = 0
 
-if (Test-Path $OutputFile) {
+if (Test-Path $VersionFile) {
     try {
-        $ExistingContent = Get-Content $OutputFile -Raw
-        # Extract version from header comment (format: "Version: x.y.z")
-        if ($ExistingContent -match 'Version:\s*(\d+)\.(\d+)\.(\d+)') {
+        $ExistingVersion = (Get-Content $VersionFile -Raw).Trim()
+        # Parse version (format: "x.y.z")
+        if ($ExistingVersion -match '(\d+)\.(\d+)\.(\d+)') {
             $BaseVersion = "$($Matches[1]).$($Matches[2])"
             $BuildNumber = [int]$Matches[3]
         }
@@ -41,6 +42,9 @@ if (Test-Path $OutputFile) {
 # Increment build number
 $BuildNumber++
 $BoxVersion = "$BaseVersion.$BuildNumber"
+
+# Persist new version to SOURCE file
+Set-Content -Path $VersionFile -Value $BoxVersion -NoNewline -Encoding UTF8
 
 Write-Host "Version: $BoxVersion (build #$BuildNumber)" -ForegroundColor Cyan
 
@@ -111,10 +115,10 @@ $content += @"
 
 "@
 
-# BOXER ONLY: Include only UI functions (shared between boxer and box)
+# BOXER ONLY: Include only UI functions and version management (shared between boxer and box)
 # Workspace-specific files (download, extract, packages, etc.) are NOT needed for boxer
 # See: ~ANALYSIS-BOXER-ARCHITECTURE.md for rationale
-$coreInclude = @('ui.ps1')  # Only display functions
+$coreInclude = @('ui.ps1', 'version.ps1')  # Display and version functions
 
 $coreFiles = Get-ChildItem -Path (Join-Path $RepoRoot "core") -Filter "*.ps1" |
     Where-Object { $_.Name -in $coreInclude } |
@@ -165,8 +169,8 @@ Initialize-Boxing -Arguments $Arguments
 $finalContent = ($content -join "`n")
 
 # Replace version placeholders in embedded code
-$finalContent = $finalContent -replace '\$NewVersion = "0\.1\.0"  # Will be replaced by build script with actual version', "`$NewVersion = `"$BoxVersion`""
-$finalContent = $finalContent -replace '\$CurrentVersion = "0\.1\.0"  # Will be replaced by build script', "`$CurrentVersion = `"$BoxVersion`""
+$finalContent = $finalContent -replace '\$script:BoxerVersion = "0\.1\.0"', "`$script:BoxerVersion = `"$BoxVersion`""
+$finalContent = $finalContent -replace 'Version: 0\.1\.0', "Version: $BoxVersion"
 
 $finalContent | Set-Content -Path $OutputFile -Encoding UTF8
 
