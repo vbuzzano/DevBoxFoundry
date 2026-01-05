@@ -85,10 +85,14 @@ if (-not (Test-Path "dist\boxer.ps1")) {
 Copy-Item -Force "dist\boxer.ps1" "$ReleaseDir\boxer.ps1"
 
 Write-Host "   box.ps1 (runtime)..." -ForegroundColor Gray
+Write-Host "   box.ps1 (runtime)..." -ForegroundColor Gray
 Copy-Item -Force "dist\box.ps1" "$ReleaseDir\box.ps1"
 
 Write-Host "   config.psd1 (box configuration)..." -ForegroundColor Gray
 Copy-Item -Force "$BoxPath\config.psd1" "$ReleaseDir\config.psd1"
+
+Write-Host "   env.ps1 (environment configuration)..." -ForegroundColor Gray
+Copy-Item -Force "$BoxPath\env.ps1" "$ReleaseDir\env.ps1"
 
 # Read EXISTING release metadata to preserve incremented version
 $existingVersion = "1.0.0"

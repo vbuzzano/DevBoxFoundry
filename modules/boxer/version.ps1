@@ -11,6 +11,3 @@ function Invoke-Boxer-Version {
 
     Write-Host "Boxing v$BoxerVersion" -ForegroundColor Cyan
 }
-
-    Write-Host ""
-}
