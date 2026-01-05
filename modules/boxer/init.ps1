@@ -200,7 +200,7 @@ function Install-BoxingSystem {
         if ($NeedsUpdate) {
             # If executed via irm|iex, $PSCommandPath is empty - download from GitHub
             if (-not $PSCommandPath -or -not (Test-Path $PSCommandPath)) {
-                $boxerUrl = "https://raw.githubusercontent.com/vbuzzano/AmiDevBox/refs/heads/main/boxer.ps1"
+                $boxerUrl = "https://raw.githubusercontent.com/vbuzzano/AmiDevBox/main/boxer.ps1"
 
                 try {
                     Invoke-RestMethod -Uri $boxerUrl -OutFile $BoxerPath
@@ -406,7 +406,7 @@ function Install-CurrentBox {
         $BoxMetadataPath = Join-Path $BoxDir "metadata.psd1"
 
         # Base URL for downloads
-        $BaseUrl = "https://raw.githubusercontent.com/vbuzzano/$BoxName/refs/heads/main"
+        $BaseUrl = "https://raw.githubusercontent.com/vbuzzano/$BoxName/main"
 
         # Get installed version and boxer version
         $InstalledVersion = Get-InstalledVersion -MetadataPath $BoxMetadataPath

@@ -21,30 +21,36 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutputFile = Join-Path $RepoRoot "dist\boxer.ps1"
 
-# Read version from existing dist/boxer.ps1 OR from boxer.version file
+# Read version from boxer.version file and auto-increment
 $VersionFile = Join-Path $RepoRoot "boxer.version"
-$ExistingBoxer = Join-Path $RepoRoot "dist\boxer.ps1"
-$BoxVersion = $null
 
-# Priority 1: Read from existing dist/boxer.ps1 (already built)
-if (Test-Path $ExistingBoxer) {
-    $content = Get-Content $ExistingBoxer -Raw
-    if ($content -match 'Version:\s*(\d+\.\d+\.\d+)') {
-        $BoxVersion = $Matches[1]
-    }
+# Read current version
+if (-not (Test-Path $VersionFile)) {
+    throw "boxer.version file not found"
 }
 
-# Priority 2: Read from boxer.version file
-if (-not $BoxVersion -and (Test-Path $VersionFile)) {
-    $BoxVersion = (Get-Content $VersionFile -Raw).Trim()
+$CurrentVersion = (Get-Content $VersionFile -Raw).Trim()
+if (-not $CurrentVersion) {
+    throw "boxer.version file is empty"
 }
 
-# No version found = fatal error
-if (-not $BoxVersion) {
-    throw "No version found in dist/boxer.ps1 or boxer.version file"
-}
+# Parse and increment version
+if ($CurrentVersion -match '^(\d+)\.(\d+)\.(\d+)$') {
+    $major = [int]$Matches[1]
+    $minor = [int]$Matches[2]
+    $build = [int]$Matches[3]
 
-Write-Host "Version: $BoxVersion" -ForegroundColor Cyan
+    # Increment build number
+    $build++
+    $BoxVersion = "$major.$minor.$build"
+
+    # Save incremented version for this build
+    Set-Content -Path $VersionFile -Value $BoxVersion -NoNewline
+
+    Write-Host "Version: $CurrentVersion → $BoxVersion" -ForegroundColor Cyan
+} else {
+    throw "Invalid version format in boxer.version: $CurrentVersion"
+}
 
 Write-Host "`n🔨 Building boxer.ps1" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor DarkGray
