@@ -9,5 +9,5 @@ function Invoke-Boxer-Version {
         "Unknown"
     }
 
-    Write-Host "Boxing v$BoxerVersion" -ForegroundColor Cyan
+    Write-Host "Boxer v$BoxerVersion" -ForegroundColor Cyan
 }
