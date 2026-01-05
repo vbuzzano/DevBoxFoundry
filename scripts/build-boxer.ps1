@@ -21,32 +21,30 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutputFile = Join-Path $RepoRoot "dist\boxer.ps1"
 
-# Read version from SOURCE file (boxer.version) - survives Remove-Item dist
+# Read version from existing dist/boxer.ps1 OR from boxer.version file
 $VersionFile = Join-Path $RepoRoot "boxer.version"
-$BaseVersion = "1.0"
-$BuildNumber = 0
+$ExistingBoxer = Join-Path $RepoRoot "dist\boxer.ps1"
+$BoxVersion = $null
 
-if (Test-Path $VersionFile) {
-    try {
-        $ExistingVersion = (Get-Content $VersionFile -Raw).Trim()
-        # Parse version (format: "x.y.z")
-        if ($ExistingVersion -match '(\d+)\.(\d+)\.(\d+)') {
-            $BaseVersion = "$($Matches[1]).$($Matches[2])"
-            $BuildNumber = [int]$Matches[3]
-        }
-    } catch {
-        Write-Warning "Could not read existing version, using default"
+# Priority 1: Read from existing dist/boxer.ps1 (already built)
+if (Test-Path $ExistingBoxer) {
+    $content = Get-Content $ExistingBoxer -Raw
+    if ($content -match 'Version:\s*(\d+\.\d+\.\d+)') {
+        $BoxVersion = $Matches[1]
     }
 }
 
-# Increment build number
-$BuildNumber++
-$BoxVersion = "$BaseVersion.$BuildNumber"
+# Priority 2: Read from boxer.version file
+if (-not $BoxVersion -and (Test-Path $VersionFile)) {
+    $BoxVersion = (Get-Content $VersionFile -Raw).Trim()
+}
 
-# Persist new version to SOURCE file
-Set-Content -Path $VersionFile -Value $BoxVersion -NoNewline -Encoding UTF8
+# No version found = fatal error
+if (-not $BoxVersion) {
+    throw "No version found in dist/boxer.ps1 or boxer.version file"
+}
 
-Write-Host "Version: $BoxVersion (build #$BuildNumber)" -ForegroundColor Cyan
+Write-Host "Version: $BoxVersion" -ForegroundColor Cyan
 
 Write-Host "`n🔨 Building boxer.ps1" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor DarkGray

@@ -263,9 +263,13 @@ if (Test-Path `$boxingInit) {
             Install-CurrentBox -BoxName $SourceRepo -BoxingDir $BoxingDir
         }
 
-        # Create init.ps1 in Boxing directory for easy session loading
-        Write-Step "Creating session loader..."
-        $InitScript = @"
+        # Determine if we need to configure profile and load functions
+        $ProfileNeedsConfig = -not ($ProfileContent -match '#region boxing')
+        $FunctionsNeedLoading = $ProfileNeedsConfig -or -not (Get-Command -Name boxer -ErrorAction SilentlyContinue)
+
+        # Create/update init.ps1 only on first install or update
+        if (-not $BoxerAlreadyInstalled -or $NeedsUpdate) {
+            $InitScript = @"
 # Boxing Session Loader
 # Run this to load boxer and box functions in current session without restarting PowerShell
 #
@@ -308,60 +312,68 @@ function box {
 
 Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
 "@
-        $InitPath = Join-Path $BoxingDir "init.ps1"
-        Set-Content -Path $InitPath -Value $InitScript -Encoding UTF8
-        Write-Success "Created: init.ps1"
-
-        # Load functions in current session via global scope
-        Write-Step "Loading functions in current session..."
-
-        $global:function:boxer = {
-            $boxerPath = "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
-            if (Test-Path $boxerPath) {
-                & $boxerPath @args
-            } else {
-                Write-Host "Error: boxer.ps1 not found at $boxerPath" -ForegroundColor Red
-            }
+            $InitPath = Join-Path $BoxingDir "init.ps1"
+            Set-Content -Path $InitPath -Value $InitScript -Encoding UTF8
         }
 
-        $global:function:box = {
-            $boxScript = $null
-            $current = (Get-Location).Path
-
-            while ($current -ne [System.IO.Path]::GetPathRoot($current)) {
-                $testPath = Join-Path $current ".box\box.ps1"
-                if (Test-Path $testPath) {
-                    $boxScript = $testPath
-                    break
+        # Load functions in current session only if needed (profile not configured or function missing)
+        if ($FunctionsNeedLoading) {
+            $global:function:boxer = {
+                $boxerPath = "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
+                if (Test-Path $boxerPath) {
+                    & $boxerPath @args
+                } else {
+                    Write-Host "Error: boxer.ps1 not found at $boxerPath" -ForegroundColor Red
                 }
-                $parent = Split-Path $current -Parent
-                if (-not $parent) { break }
-                $current = $parent
             }
 
-            if (-not $boxScript) {
-                Write-Host "❌ No box project found" -ForegroundColor Red
-                Write-Host ""
-                Write-Host "Create a new project:" -ForegroundColor Cyan
-                Write-Host "  boxer init MyProject" -ForegroundColor White
-                return
-            }
+            $global:function:box = {
+                $boxScript = $null
+                $current = (Get-Location).Path
 
-            & $boxScript @args
+                while ($current -ne [System.IO.Path]::GetPathRoot($current)) {
+                    $testPath = Join-Path $current ".box\box.ps1"
+                    if (Test-Path $testPath) {
+                        $boxScript = $testPath
+                        break
+                    }
+                    $parent = Split-Path $current -Parent
+                    if (-not $parent) { break }
+                    $current = $parent
+                }
+
+                if (-not $boxScript) {
+                    Write-Host "❌ No box project found" -ForegroundColor Red
+                    Write-Host ""
+                    Write-Host "Create a new project:" -ForegroundColor Cyan
+                    Write-Host "  boxer init MyProject" -ForegroundColor White
+                    return
+                }
+
+                & $boxScript @args
+            }
         }
 
-        # Only show "functions loaded" message on first install
+        # Display appropriate completion message
         if (-not $BoxerAlreadyInstalled) {
+            # First installation
             Write-Success "✓ Boxing functions loaded (boxer, box)"
+            Write-Success "Boxing system installed successfully!"
+            Write-Host ""
+            Write-Host "  Ready to use! Try:" -ForegroundColor Cyan
+            Write-Host "    boxer init MyProject" -ForegroundColor White
+            Write-Host ""
+            Write-Host "  💡 Recommended: Restart PowerShell for permanent installation" -ForegroundColor Yellow
+            Write-Host "     (functions work now, but restart ensures they persist)" -ForegroundColor DarkGray
+        } elseif ($NeedsUpdate) {
+            # Update
+            if ($FunctionsNeedLoading) {
+                Write-Success "✓ Boxing functions loaded (boxer, box)"
+            }
+            Write-Host ""
+            Write-Host "  💡 Restart PowerShell to apply changes" -ForegroundColor Yellow
         }
-
-        Write-Success "Boxing system installed successfully!"
-        Write-Host ""
-        Write-Host "  Ready to use! Try:" -ForegroundColor Cyan
-        Write-Host "    boxer init MyProject" -ForegroundColor White
-        Write-Host ""
-        Write-Host "  💡 Recommended: Restart PowerShell for permanent installation" -ForegroundColor Yellow
-        Write-Host "     (functions work now, but restart ensures they persist)" -ForegroundColor DarkGray
+        # Else: already up-to-date, no message (already displayed earlier)
 
     } catch {
         Write-Host "Installation failed: $_" -ForegroundColor Red
@@ -388,8 +400,6 @@ function Install-CurrentBox {
         [string]$BoxingDir
     )
 
-    Write-Step "Installing $BoxName box..."
-
     try {
         $BoxesDir = Join-Path $BoxingDir "Boxes"
         $BoxDir = Join-Path $BoxesDir $BoxName
@@ -398,18 +408,27 @@ function Install-CurrentBox {
         # Base URL for downloads
         $BaseUrl = "https://raw.githubusercontent.com/vbuzzano/$BoxName/main"
 
-        # Get installed version
+        # Get installed version and boxer version
         $InstalledVersion = Get-InstalledVersion -MetadataPath $BoxMetadataPath
+        $InstalledBoxerVersion = $null
+        if (Test-Path $BoxMetadataPath) {
+            $metadata = Import-PowerShellDataFile $BoxMetadataPath
+            $InstalledBoxerVersion = $metadata.BoxerVersion
+        }
 
-        # Get remote version from GitHub
+        # Get remote version and boxer version from GitHub
         $RemoteVersion = $null
+        $RemoteBoxerVersion = $null
         try {
             $RemoteMetadataUrl = "$BaseUrl/metadata.psd1"
             $RemoteMetadataContent = Invoke-RestMethod -Uri $RemoteMetadataUrl -ErrorAction Stop
 
-            # Parse version from downloaded content
+            # Parse version and boxer version from downloaded content
             if ($RemoteMetadataContent -match 'Version\s*=\s*"([^"]+)"') {
                 $RemoteVersion = $Matches[1]
+            }
+            if ($RemoteMetadataContent -match 'BoxerVersion\s*=\s*"([^"]+)"') {
+                $RemoteBoxerVersion = $Matches[1]
             }
         } catch {
             Write-Warn "Could not fetch remote version, proceeding with install"
@@ -417,18 +436,27 @@ function Install-CurrentBox {
 
         # Determine if update is needed
         $NeedsUpdate = $false
+        $UpdateReason = ""
+
         if (-not (Test-Path $BoxDir)) {
             $NeedsUpdate = $true
-            Write-Step "Installing $BoxName..."
+            $UpdateReason = "Installing $BoxName box..."
         } elseif ($RemoteVersion -and $InstalledVersion -and (Compare-Version -Version1 $RemoteVersion -Version2 $InstalledVersion) -gt 0) {
             $NeedsUpdate = $true
-            Write-Step "Updating $BoxName ($InstalledVersion → $RemoteVersion)..."
+            $UpdateReason = "Updating $BoxName box ($InstalledVersion → $RemoteVersion)..."
+        } elseif ($RemoteBoxerVersion -and $InstalledBoxerVersion -and (Compare-Version -Version1 $RemoteBoxerVersion -Version2 $InstalledBoxerVersion) -gt 0) {
+            $NeedsUpdate = $true
+            $UpdateReason = "Updating $BoxName box (core $InstalledBoxerVersion → $RemoteBoxerVersion)..."
         } elseif ($RemoteVersion -and $InstalledVersion -and (Compare-Version -Version1 $RemoteVersion -Version2 $InstalledVersion) -eq 0) {
             Write-Success "$BoxName already up-to-date (v$InstalledVersion)"
             return
         } else {
             Write-Success "$BoxName already installed (v$InstalledVersion)"
             return
+        }
+
+        if ($NeedsUpdate) {
+            Write-Step $UpdateReason
         }
 
         if (-not $NeedsUpdate) {

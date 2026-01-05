@@ -52,6 +52,25 @@ try {
         throw "Build failed: dist\boxer.ps1 not created"
     }
 
+    # Extract and increment boxer version for next build
+    $BoxerContent = Get-Content "dist\boxer.ps1" -Raw
+    if ($BoxerContent -match 'Version:\s*(\d+\.\d+\.\d+)') {
+        $currentBoxerVersion = $Matches[1]
+
+        # Increment build number
+        if ($currentBoxerVersion -match '(\d+)\.(\d+)\.(\d+)') {
+            $major = $Matches[1]
+            $minor = $Matches[2]
+            $build = [int]$Matches[3]
+            $build++
+            $nextBoxerVersion = "$major.$minor.$build"
+
+            # Save incremented version for next build
+            Set-Content -Path "boxer.version" -Value $nextBoxerVersion -NoNewline -Encoding UTF8
+            Write-Host "   Boxer version incremented: $currentBoxerVersion → $nextBoxerVersion (for next build)" -ForegroundColor DarkGray
+        }
+    }
+
     Write-Host ""
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host ""

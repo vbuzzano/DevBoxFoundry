@@ -93,48 +93,34 @@ Copy-Item -Force "$BoxPath\config.psd1" "$ReleaseDir\config.psd1"
 Write-Host "   env.ps1 (environment configuration)..." -ForegroundColor Gray
 Copy-Item -Force "$BoxPath\env.ps1" "$ReleaseDir\env.ps1"
 
-# Read version from SOURCE metadata (boxers/AmiDevBox/metadata.psd1) - survives Remove-Item dist
+# Read current version from SOURCE metadata
 $sourceMetadataPath = "$BoxPath\metadata.psd1"
-$existingVersion = "1.0.0"
-if (Test-Path $sourceMetadataPath) {
-    $sourceContent = Get-Content $sourceMetadataPath -Raw
-    if ($sourceContent -match 'Version\s*=\s*"([^"]*)"') {
-        $existingVersion = $Matches[1]
-    }
-}
+$sourceMetadata = Import-PowerShellDataFile $sourceMetadataPath
+$currentVersion = $sourceMetadata.Version
 
-Write-Host "   metadata.psd1 (box metadata)..." -ForegroundColor Gray
-Copy-Item -Force "$BoxPath\metadata.psd1" "$ReleaseDir\metadata.psd1"
-
-# Update metadata.psd1 with current boxer version AND auto-increment build number
-Write-Host "   metadata.psd1 (updating BoxerVersion + incrementing build)..." -ForegroundColor Gray
-$metadataPath = "$ReleaseDir\metadata.psd1"
-$metadataContent = Get-Content $metadataPath -Raw
-
-# Increment build number from EXISTING version (not source)
-if ($existingVersion -match '(\d+)\.(\d+)\.(\d+)') {
+# Increment build number
+if ($currentVersion -match '(\d+)\.(\d+)\.(\d+)') {
     $major = $Matches[1]
     $minor = $Matches[2]
     $build = [int]$Matches[3]
     $build++
     $newVersion = "$major.$minor.$build"
-    Write-Host "      Version: $existingVersion → $newVersion" -ForegroundColor DarkGray
+    Write-Host "   Auto-incrementing version: $currentVersion → $newVersion" -ForegroundColor DarkGray
 } else {
-    $newVersion = "1.0.1"
-    Write-Host "      Version: (first release, using 1.0.1)" -ForegroundColor Yellow
+    throw "Invalid version format in source metadata: $currentVersion"
 }
 
-# Apply all updates
-$metadataContent = $metadataContent -replace '(Version\s*=\s*")[^"]*', "`${1}$newVersion"
-$metadataContent = $metadataContent -replace '(BoxerVersion\s*=\s*")[^"]*', "`${1}$BoxerVersion"
-$metadataContent = $metadataContent -replace '(BuildDate\s*=\s*")[^"]*', "`${1}$(Get-Date -Format 'yyyy-MM-dd')"
-$metadataContent | Set-Content $metadataPath -Encoding UTF8
-
-# Update SOURCE metadata with incremented version (persist for next build)
-Write-Host "   Updating source metadata with new version: $newVersion" -ForegroundColor DarkGray
+# Update SOURCE metadata FIRST (persist for next build)
+Write-Host "   Updating source metadata..." -ForegroundColor Gray
 $sourceContent = Get-Content $sourceMetadataPath -Raw
 $sourceContent = $sourceContent -replace '(Version\s*=\s*")[^"]*', "`${1}$newVersion"
+$sourceContent = $sourceContent -replace '(BoxerVersion\s*=\s*")[^"]*', "`${1}$BoxerVersion"
+$sourceContent = $sourceContent -replace '(BuildDate\s*=\s*")[^"]*', "`${1}$(Get-Date -Format 'yyyy-MM-dd')"
 $sourceContent | Set-Content $sourceMetadataPath -Encoding UTF8
+
+# Copy updated metadata to release
+Write-Host "   metadata.psd1 (box metadata)..." -ForegroundColor Gray
+Copy-Item -Force "$BoxPath\metadata.psd1" "$ReleaseDir\metadata.psd1"
 
 Write-Host "   tpl/ (template directory)..." -ForegroundColor Gray
 if (Test-Path "$BoxPath\tpl") {
@@ -178,6 +164,7 @@ Write-Host ""
 Write-Host "✅ Amiga release configured successfully" -ForegroundColor Green
 
 # Read final metadata to return
+$metadataPath = "$ReleaseDir\metadata.psd1"
 $finalMetadata = Import-PowerShellDataFile $metadataPath
 
 # Return metadata
