@@ -234,18 +234,22 @@ function Initialize-Boxing {
                     if ($InstalledVersion -and $CurrentVersion -and ([version]$CurrentVersion -gt [version]$InstalledVersion)) {
                         Write-Host ""
                         Write-Host "🔄 Boxing update: $InstalledVersion → $CurrentVersion" -ForegroundColor Cyan
-                        Install-BoxingSystem
-                        return
+                        Install-BoxingSystem | Out-Null
+                        return 0
                     }
                 } catch {
                     # Version parsing failed, skip update
                 }
-                # Already up-to-date - exit silently for irm|iex
-                return
+                # Boxer up-to-date, but check if box needs install/update
+                if ($script:SourceRepo) {
+                    $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
+                    Install-CurrentBox -BoxName $script:SourceRepo -BoxingDir $BoxingDir
+                }
+                return 0
             } else {
                 # First-time installation
-                Install-BoxingSystem
-                return
+                Install-BoxingSystem | Out-Null
+                return 0
             }
         }        # Step 1: Detect mode
         $mode = Initialize-Mode
@@ -273,9 +277,11 @@ function Initialize-Boxing {
             }
 
             Invoke-Command -CommandName $command -Arguments $cmdArgs | Out-Null
+            return 0
         }
         else {
             Show-Help
+            return 0
         }
     }
     catch {
