@@ -241,43 +241,13 @@ function Install-BoxingSystem {
         if ($ProfileContent -match '#region boxing') {
             Write-Success "Profile already configured (skipping)"
         } else {
-            # Add Boxing region to profile
+            # Add Boxing region to profile (lightweight dot-source approach)
             $BoxingRegion = @"
 
 #region boxing
-function boxer {
-    `$boxerPath = "`$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
-    if (Test-Path `$boxerPath) {
-        & `$boxerPath @args
-    } else {
-        Write-Host "Error: boxer.ps1 not found at `$boxerPath" -ForegroundColor Red
-    }
-}
-
-function box {
-    `$boxScript = `$null
-    `$current = (Get-Location).Path
-
-    while (`$current -ne [System.IO.Path]::GetPathRoot(`$current)) {
-        `$testPath = Join-Path `$current ".box\box.ps1"
-        if (Test-Path `$testPath) {
-            `$boxScript = `$testPath
-            break
-        }
-        `$parent = Split-Path `$current -Parent
-        if (-not `$parent) { break }
-        `$current = `$parent
-    }
-
-    if (-not `$boxScript) {
-        Write-Host "❌ No box project found" -ForegroundColor Red
-        Write-Host ""
-        Write-Host "Create a new project:" -ForegroundColor Cyan
-        Write-Host "  boxer init MyProject" -ForegroundColor White
-        return
-    }
-
-    & `$boxScript @args
+`$boxingInit = "`$env:USERPROFILE\Documents\PowerShell\Boxing\init.ps1"
+if (Test-Path `$boxingInit) {
+    . `$boxingInit
 }
 #endregion boxing
 "@
@@ -285,7 +255,7 @@ function box {
             # Append to profile
             $ProfileContent += $BoxingRegion
             Set-Content -Path $ProfilePath -Value $ProfileContent -Encoding UTF8
-            Write-Success "Profile configured with boxer and box functions"
+            Write-Success "Profile configured with Boxing loader"
         }
 
         # Install box if this is a box repository (not Boxing main repo)
@@ -495,7 +465,7 @@ function Install-CurrentBox {
             Write-Warn "metadata.psd1 not found (optional)"
         }
 
-        # Download tpl/ directory
+        # Download tpl/ directory (FILES ONLY, no subdirectories)
         Write-Step "Downloading templates..."
         $TplDir = Join-Path $BoxDir "tpl"
         New-Item -ItemType Directory -Path $TplDir -Force | Out-Null
@@ -506,23 +476,11 @@ function Install-CurrentBox {
             $TplFiles = Invoke-RestMethod -Uri $ApiUrl
 
             foreach ($File in $TplFiles) {
+                # Download ONLY files at root of tpl/, skip directories (docs/, src/, etc.)
                 if ($File.type -eq 'file') {
                     $FilePath = Join-Path $TplDir $File.name
                     Invoke-RestMethod -Uri $File.download_url -OutFile $FilePath
                     Write-Success "Downloaded: tpl/$($File.name)"
-                } elseif ($File.type -eq 'dir') {
-                    # Recursive download for subdirectories
-                    $SubDir = Join-Path $TplDir $File.name
-                    New-Item -ItemType Directory -Path $SubDir -Force | Out-Null
-
-                    $SubFiles = Invoke-RestMethod -Uri $File.url
-                    foreach ($SubFile in $SubFiles) {
-                        if ($SubFile.type -eq 'file') {
-                            $SubFilePath = Join-Path $SubDir $SubFile.name
-                            Invoke-RestMethod -Uri $SubFile.download_url -OutFile $SubFilePath
-                            Write-Success "Downloaded: tpl/$($File.name)/$($SubFile.name)"
-                        }
-                    }
                 }
             }
         } catch {

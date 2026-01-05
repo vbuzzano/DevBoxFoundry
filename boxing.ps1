@@ -234,15 +234,18 @@ function Initialize-Boxing {
                     if ($InstalledVersion -and $CurrentVersion -and ([version]$CurrentVersion -gt [version]$InstalledVersion)) {
                         Write-Host ""
                         Write-Host "🔄 Boxing update: $InstalledVersion → $CurrentVersion" -ForegroundColor Cyan
-                        return Install-BoxingSystem
+                        Install-BoxingSystem
+                        return
                     }
                 } catch {
                     # Version parsing failed, skip update
                 }
-                # Skip if same version or downgrade
+                # Already up-to-date - exit silently for irm|iex
+                return
             } else {
                 # First-time installation
-                return Install-BoxingSystem
+                Install-BoxingSystem
+                return
             }
         }        # Step 1: Detect mode
         $mode = Initialize-Mode
@@ -269,11 +272,10 @@ function Initialize-Boxing {
                 @()
             }
 
-            return Invoke-Command -CommandName $command -Arguments $cmdArgs
+            Invoke-Command -CommandName $command -Arguments $cmdArgs | Out-Null
         }
         else {
             Show-Help
-            return 0
         }
     }
     catch {
