@@ -239,11 +239,6 @@ function Initialize-Boxing {
                 } catch {
                     # Version parsing failed, skip update
                 }
-                # Boxer up-to-date, but check if box needs install/update
-                if ($script:SourceRepo) {
-                    $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
-                    Install-CurrentBox -BoxName $script:SourceRepo -BoxingDir $BoxingDir
-                }
             } else {
                 # First-time installation
                 Install-BoxingSystem | Out-Null
