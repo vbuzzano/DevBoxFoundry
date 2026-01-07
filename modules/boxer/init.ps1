@@ -438,18 +438,23 @@ function Invoke-Boxer-Init {
                 Write-Host "  ⚠ main.c.template not found, skipping" -ForegroundColor Yellow
             }
 
-            # Generate .vscode/settings.json from template
+            # Generate .vscode/settings.json from template (only if not exists)
             $VSCodeDir = Join-Path $TargetDir ".vscode"
             $VSCodeSettingsPath = Join-Path $VSCodeDir "settings.json"
-            $VSCodeTemplate = Join-Path $BoxPath "tpl\vscode-settings.json.template"
-            if (Test-Path $VSCodeTemplate) {
-                New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
-                Track-Creation $VSCodeDir 'directory'
-                Copy-Item -Path $VSCodeTemplate -Destination $VSCodeSettingsPath -Force
-                Track-Creation $VSCodeSettingsPath 'file'
-                Write-Success "Created: .vscode/settings.json"
+            
+            if (-not (Test-Path $VSCodeSettingsPath)) {
+                $VSCodeTemplate = Join-Path $BoxPath "tpl\vscode-settings.json.template"
+                if (Test-Path $VSCodeTemplate) {
+                    New-Item -ItemType Directory -Path $VSCodeDir -Force | Out-Null
+                    Track-Creation $VSCodeDir 'directory'
+                    Copy-Item -Path $VSCodeTemplate -Destination $VSCodeSettingsPath
+                    Track-Creation $VSCodeSettingsPath 'file'
+                    Write-Success "Created: .vscode/settings.json"
+                } else {
+                    Write-Host "  ⚠ vscode-settings.json.template not found, skipping" -ForegroundColor Yellow
+                }
             } else {
-                Write-Host "  ⚠ vscode-settings.json.template not found, skipping" -ForegroundColor Yellow
+                Write-Success "Preserved: .vscode/settings.json (already exists)"
             }
 
             Write-Host ""
