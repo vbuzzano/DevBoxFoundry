@@ -853,6 +853,12 @@ function Install-CurrentBox {
         # Download tpl/ directory (FILES ONLY, no subdirectories)
         Write-Step "Downloading templates..."
         $TplDir = Join-Path $BoxDir "tpl"
+        
+        # Clean tpl directory if updating (remove old files)
+        if (Test-Path $TplDir) {
+            Remove-Item -Path $TplDir -Recurse -Force
+        }
+        
         New-Item -ItemType Directory -Path $TplDir -Force | Out-Null
 
         # Use GitHub API to list tpl/ contents
