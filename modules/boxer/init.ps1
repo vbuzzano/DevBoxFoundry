@@ -171,12 +171,15 @@ function Invoke-Boxer-Init {
         [string]$Box = ""
     )
 
-    # Early detection of update mode (before prompting for name)
+    # FIRST: Detect if current directory is already a box project
+    $CurrentDirIsBox = Test-Path (Join-Path (Get-Location) ".box")
+    
+    # Determine target directory and update mode
     $IsUpdate = $false
     $TargetDir = ""
     
     if (-not [string]::IsNullOrWhiteSpace($Path)) {
-        # Path provided - check if it's an existing box project
+        # Path explicitly provided - resolve and check
         $TargetDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
         $BoxPath = Join-Path $TargetDir ".box"
         $IsUpdate = (Test-Path $TargetDir) -and (Test-Path $BoxPath)
@@ -187,6 +190,10 @@ function Invoke-Boxer-Init {
             Write-Host "  Remove the directory or choose a different path" -ForegroundColor Yellow
             return
         }
+    } elseif ($CurrentDirIsBox) {
+        # No path provided but current dir is a box → update current directory
+        $TargetDir = (Get-Location).Path
+        $IsUpdate = $true
     }
 
     # In update mode, extract name from existing directory
