@@ -169,7 +169,7 @@ function Ask-Path {
 
 function Show-Help {
     Write-Host ""
-    Write-Host "Boxing - Reproducible Development Environment Manager" -ForegroundColor Cyan
+    Write-Host "Boxing - Reproducible Environment Manager" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Yellow
     if ($script:Mode -eq 'boxer') {
