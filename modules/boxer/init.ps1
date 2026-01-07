@@ -350,7 +350,7 @@ function Invoke-Boxer-Init {
             Write-Host "❌ Project update failed: $_" -ForegroundColor Red
             Write-Host ""
         }
-
+    
     } else {
         # CREATION MODE
         Write-Step "Creating project: $SafeName"
