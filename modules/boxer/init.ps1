@@ -209,6 +209,9 @@ function Invoke-Boxer-Init {
             if ([string]::IsNullOrWhiteSpace($Name)) {
                 Write-Err "Project name is required"
                 return
+            }
+        }
+
         # Sanitize project name
         $SafeName = Sanitize-ProjectName -Name $Name
         if ([string]::IsNullOrWhiteSpace($SafeName)) {
@@ -219,9 +222,6 @@ function Invoke-Boxer-Init {
         # Prompt for description if not provided
         if ([string]::IsNullOrWhiteSpace($Description)) {
             $Description = Read-Host "Description (optional)"
-        }
-
-        # Determine target directory
         }
 
         # Determine target directory
@@ -350,7 +350,7 @@ function Invoke-Boxer-Init {
             Write-Host "❌ Project update failed: $_" -ForegroundColor Red
             Write-Host ""
         }
-    
+
     } else {
         # CREATION MODE
         Write-Step "Creating project: $SafeName"
