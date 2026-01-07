@@ -98,7 +98,7 @@ function Get-InstalledBoxes {
         return @()
     }
 
-    $boxes = Get-ChildItem -Path $BoxesDir -Directory | Select-Object -ExpandProperty Name
+    $boxes = @(Get-ChildItem -Path $BoxesDir -Directory | Select-Object -ExpandProperty Name)
     return $boxes
 }
 
