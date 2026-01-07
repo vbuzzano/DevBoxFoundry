@@ -171,47 +171,57 @@ function Invoke-Boxer-Init {
         [string]$Box = ""
     )
 
-    # Prompt for name if not provided
-    if ([string]::IsNullOrWhiteSpace($Name)) {
-        $Name = Read-Host "Project name"
-        if ([string]::IsNullOrWhiteSpace($Name)) {
-            Write-Err "Project name is required"
+    # Early detection of update mode (before prompting for name)
+    $IsUpdate = $false
+    $TargetDir = ""
+    
+    if (-not [string]::IsNullOrWhiteSpace($Path)) {
+        # Path provided - check if it's an existing box project
+        $TargetDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+        $BoxPath = Join-Path $TargetDir ".box"
+        $IsUpdate = (Test-Path $TargetDir) -and (Test-Path $BoxPath)
+        
+        # Error if directory exists but not a box project
+        if ((Test-Path $TargetDir) -and -not $IsUpdate) {
+            Write-Err "Directory '$TargetDir' exists but is not a Box project"
+            Write-Host "  Remove the directory or choose a different path" -ForegroundColor Yellow
             return
         }
     }
 
-    # Sanitize project name
-    $SafeName = Sanitize-ProjectName -Name $Name
-    if ([string]::IsNullOrWhiteSpace($SafeName)) {
-        Write-Err "Invalid project name after sanitization"
-        return
-    }
-
-    # Determine target directory
-    if ([string]::IsNullOrWhiteSpace($Path)) {
-        $TargetDir = Join-Path (Get-Location) $SafeName
-    } else {
-        $TargetDir = $Path
-    }
-
-    # Resolve to absolute path
-    $TargetDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($TargetDir)
-
-    # Detect update mode
-    $BoxPath = Join-Path $TargetDir ".box"
-    $IsUpdate = (Test-Path $TargetDir) -and (Test-Path $BoxPath)
-
-    # Error if directory exists but not a box project
-    if ((Test-Path $TargetDir) -and -not $IsUpdate) {
-        Write-Err "Directory '$TargetDir' exists but is not a Box project"
-        Write-Host "  Remove the directory or choose a different path" -ForegroundColor Yellow
-        return
-    }
-
-    # For update mode, extract project name from path
+    # In update mode, extract name from existing directory
     if ($IsUpdate) {
         $SafeName = Split-Path -Leaf $TargetDir
+    } else {
+        # Creation mode - prompt for name if not provided
+        if ([string]::IsNullOrWhiteSpace($Name)) {
+            $Name = Read-Host "Project name"
+            if ([string]::IsNullOrWhiteSpace($Name)) {
+                Write-Err "Project name is required"
+                return
+            }
+        }
+
+        # Sanitize project name
+        $SafeName = Sanitize-ProjectName -Name $Name
+        if ([string]::IsNullOrWhiteSpace($SafeName)) {
+            Write-Err "Invalid project name after sanitization"
+            return
+        }
+
+        # Determine target directory
+        if ([string]::IsNullOrWhiteSpace($Path)) {
+            $TargetDir = Join-Path (Get-Location) $SafeName
+        } else {
+            $TargetDir = $Path
+        }
+
+        # Resolve to absolute path
+        $TargetDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($TargetDir)
     }
+
+    # Update BoxPath for later use
+    $BoxPath = Join-Path $TargetDir ".box"
 
     # Get installed boxes
     $InstalledBoxes = Get-InstalledBoxes
