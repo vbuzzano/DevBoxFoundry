@@ -289,5 +289,4 @@ function Initialize-Boxing {
     }
 }
 
-# Export main entry point
-Export-ModuleMember -Function Initialize-Boxing
+# Note: Export-ModuleMember removed - not needed in standalone scripts
