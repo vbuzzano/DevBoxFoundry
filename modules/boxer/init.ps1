@@ -238,8 +238,8 @@ function Invoke-Boxer-Init {
     # Update BoxPath for later use
     $BoxPath = Join-Path $TargetDir ".box"
 
-    # Get installed boxes
-    $InstalledBoxes = Get-InstalledBoxes
+    # Get installed boxes (force array to avoid $null)
+    $InstalledBoxes = @(Get-InstalledBoxes)
 
     if ($InstalledBoxes.Count -eq 0) {
         Write-Err "No boxes installed"
