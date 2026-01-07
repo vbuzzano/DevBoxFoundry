@@ -405,9 +405,11 @@ function Invoke-Boxer-Init {
             Write-Success "Project created: $SafeName"
             Write-Host ""
             Write-Host "  Next steps:" -ForegroundColor Cyan
-            Write-Host "    cd $SafeName" -ForegroundColor White
             Write-Host "    box install" -ForegroundColor White
             Write-Host ""
+            
+            # Navigate to the new project directory
+            Set-Location -Path $TargetDir
 
         } catch {
             Write-Host ""
