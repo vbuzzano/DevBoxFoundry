@@ -127,6 +127,8 @@ function Register-EmbeddedCommands {
         $script:Commands['clean'] = 'Invoke-Box-Clean'
         $script:Commands['status'] = 'Invoke-Box-Status'
         $script:Commands['uninstall'] = 'Invoke-Box-Uninstall'
+        $script:Commands['load'] = 'Invoke-Box-Load'
+        $script:Commands['info'] = 'Invoke-Box-Info'
         $script:Commands['version'] = 'Invoke-Box-Version'
     }
 }

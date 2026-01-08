@@ -185,10 +185,11 @@ switch (`$Command) {
     "clean" { Invoke-Box-Clean }
     "status" { Invoke-Box-Status }
     "load" { Invoke-Box-Load }
+    "info" { Invoke-Box-Info }
     "version" { Invoke-Box-Version }
     default {
         Write-Host "Unknown command: `$Command" -ForegroundColor Red
-        Write-Host "Available: install, uninstall, env, clean, status, load, version" -ForegroundColor Gray
+        Write-Host "Available: install, uninstall, env, clean, status, load, info, version" -ForegroundColor Gray
         exit 1
     }
 }
