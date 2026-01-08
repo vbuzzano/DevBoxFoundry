@@ -24,7 +24,7 @@ function Generate-DotEnvFile {
         $lines += "PROJECT_NAME=$($Config.Name)"
         $programName = if ($Config.ProgramName) { $Config.ProgramName } else { $Config.Name }
         $lines += "PROGRAM_NAME=$programName"
-    } elseif ($Config.Project -and $Config.Project.Name) {
+    } elseif ($Config.ContainsKey('Project') -and $Config.Project.Name) {
         $lines += "PROJECT_NAME=$($Config.Project.Name)"
         $lines += "PROGRAM_NAME=$($Config.Project.Name)"
     }
@@ -33,7 +33,7 @@ function Generate-DotEnvFile {
         $lines += "DESCRIPTION=$($Config.DESCRIPTION)"
     } elseif ($Config.Description) {
         $lines += "DESCRIPTION=$($Config.Description)"
-    } elseif ($Config.Project -and $Config.Project.Description) {
+    } elseif ($Config.ContainsKey('Project') -and $Config.Project.Description) {
         $lines += "DESCRIPTION=$($Config.Project.Description)"
     }
 
@@ -41,7 +41,7 @@ function Generate-DotEnvFile {
         $lines += "VERSION=$($Config.VERSION)"
     } elseif ($Config.Version) {
         $lines += "VERSION=$($Config.Version)"
-    } elseif ($Config.Project -and $Config.Project.Version) {
+    } elseif ($Config.ContainsKey('Project') -and $Config.Project.Version) {
         $lines += "VERSION=$($Config.Project.Version)"
     }
 
