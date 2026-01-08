@@ -99,6 +99,9 @@ while (`$true) {
 `$script:TempDir = Join-Path `$BaseDir "temp"
 `$script:StateFile = Join-Path `$BoxDir "state.json"
 
+# Initialize Config to empty hashtable (will be loaded by commands that need it)
+`$script:Config = @{}
+
 # ============================================================================
 # EMBEDDED boxing.ps1 (bootstrapper functions)
 # ============================================================================
