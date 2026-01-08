@@ -441,7 +441,7 @@ function Invoke-Boxer-Init {
             # Generate .vscode/settings.json from template (only if not exists)
             $VSCodeDir = Join-Path $TargetDir ".vscode"
             $VSCodeSettingsPath = Join-Path $VSCodeDir "settings.json"
-            
+
             if (-not (Test-Path $VSCodeSettingsPath)) {
                 $VSCodeTemplate = Join-Path $BoxPath "tpl\vscode-settings.json.template"
                 if (Test-Path $VSCodeTemplate) {
@@ -858,12 +858,12 @@ function Install-CurrentBox {
         # Download tpl/ directory (FILES ONLY, no subdirectories)
         Write-Step "Downloading templates..."
         $TplDir = Join-Path $BoxDir "tpl"
-        
+
         # Clean tpl directory if updating (remove old files)
         if (Test-Path $TplDir) {
             Remove-Item -Path $TplDir -Recurse -Force
         }
-        
+
         New-Item -ItemType Directory -Path $TplDir -Force | Out-Null
 
         # Use GitHub API to list tpl/ contents
