@@ -133,7 +133,7 @@ foreach ($file in $coreFiles) {
     Write-Host "✓ Embedded: core/$($file.Name)" -ForegroundColor Green
 }
 
-# Embed modules/box/*.ps1
+# Embed modules/box/*.ps1 (including subdirectories)
 $content += @"
 
 # ============================================================================
@@ -142,12 +142,13 @@ $content += @"
 
 "@
 
-$boxFiles = Get-ChildItem -Path (Join-Path $RepoRoot "modules\box") -Filter "*.ps1" | Sort-Object Name
+$boxFiles = Get-ChildItem -Path (Join-Path $RepoRoot "modules\box") -Filter "*.ps1" -Recurse | Sort-Object FullName
 foreach ($file in $boxFiles) {
-    $content += "# BEGIN modules/box/$($file.Name)"
+    $relativePath = $file.FullName.Substring((Join-Path $RepoRoot "modules\box").Length + 1)
+    $content += "# BEGIN modules/box/$relativePath"
     $content += Get-Content $file.FullName -Raw
-    $content += "# END modules/box/$($file.Name)"
-    Write-Host "✓ Embedded: modules/box/$($file.Name)" -ForegroundColor Green
+    $content += "# END modules/box/$relativePath"
+    Write-Host "✓ Embedded: modules/box/$relativePath" -ForegroundColor Green
 }
 
 # Embed modules/shared/pkg/*.ps1
@@ -167,33 +168,28 @@ foreach ($file in $pkgFiles) {
     Write-Host "✓ Embedded: modules/shared/pkg/$($file.Name)" -ForegroundColor Green
 }
 
-# Footer - command dispatcher
+# Footer - Use Initialize-Boxing dispatcher (like boxer.ps1)
 $content += @"
 
 # ============================================================================
-# MAIN - Command dispatcher
+# MAIN - Call Initialize-Boxing (Spec 010 architecture)
 # ============================================================================
 
-if (-not `$Command) {
-    Show-Help
-    exit 0
+# Set embedded flag and mode before calling Initialize-Boxing
+`$script:IsEmbedded = `$true
+`$script:Mode = 'box'
+
+# Build arguments array (Command + remaining Arguments)
+`$allArgs = @()
+if (`$Command) {
+    `$allArgs += `$Command
+}
+if (`$Arguments) {
+    `$allArgs += `$Arguments
 }
 
-switch (`$Command) {
-    "install" { Invoke-Box-Install }
-    "uninstall" { Invoke-Box-Uninstall }
-    "env" { Invoke-Box-Env -Sub (`$Arguments[0]) }
-    "clean" { Invoke-Box-Clean }
-    "status" { Invoke-Box-Status }
-    "load" { Invoke-Box-Load }
-    "info" { Invoke-Box-Info }
-    "version" { Invoke-Box-Version }
-    default {
-        Write-Host "Unknown command: `$Command" -ForegroundColor Red
-        Write-Host "Available: install, uninstall, env, clean, status, load, info, version" -ForegroundColor Gray
-        exit 1
-    }
-}
+# Call main bootstrapper with all arguments
+Initialize-Boxing -Arguments `$allArgs
 
 "@
 

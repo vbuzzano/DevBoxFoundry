@@ -172,16 +172,29 @@ function Show-Help {
     Write-Host "Boxing - Reproducible Environment Manager" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Yellow
-    if ($script:Mode -eq 'boxer') {
-        Write-Host "  boxer init <name>     Create a new Box project" -ForegroundColor White
-        Write-Host "  boxer list            List available Box types" -ForegroundColor White
-        Write-Host "  boxer install <url>   Install a Box from GitHub" -ForegroundColor White
-    } else {
-        Write-Host "  box install           Install workspace packages" -ForegroundColor White
-        Write-Host "  box status            Show installation status" -ForegroundColor White
-        Write-Host "  box env list          List environment variables" -ForegroundColor White
-        Write-Host "  box clean             Clean installation" -ForegroundColor White
-        Write-Host "  box uninstall         Remove all packages" -ForegroundColor White
+    
+    $cmdName = if ($script:Mode -eq 'boxer') { 'boxer' } else { 'box' }
+    
+    # Generate help from registered commands dynamically
+    if ($script:Commands.Count -gt 0) {
+        $sortedCommands = $script:Commands.Keys | Sort-Object
+        foreach ($cmd in $sortedCommands) {
+            $description = switch ($cmd) {
+                'init'      { 'Create a new Box project' }
+                'list'      { 'List available Box types' }
+                'install'   { if ($script:Mode -eq 'boxer') { 'Install a Box from GitHub' } else { 'Install workspace packages' } }
+                'status'    { 'Show installation status' }
+                'env'       { 'Manage environment variables' }
+                'clean'     { 'Clean installation' }
+                'uninstall' { 'Remove all packages' }
+                'load'      { 'Load environment into current shell' }
+                'info'      { 'Show workspace information' }
+                'version'   { 'Show version' }
+                default     { $cmd }
+            }
+            $padding = ' ' * (16 - $cmd.Length)
+            Write-Host "  $cmdName $cmd$padding$description" -ForegroundColor White
+        }
     }
     Write-Host ""
 }

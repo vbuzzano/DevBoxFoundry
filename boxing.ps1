@@ -24,6 +24,12 @@ if (-not (Get-Variable -Name IsEmbedded -Scope Script -ErrorAction SilentlyConti
 
 # Detect execution mode
 function Initialize-Mode {
+    # If mode already set (by embedded script), use it
+    if ($script:Mode) {
+        Write-Verbose "Mode already set: $script:Mode"
+        return $script:Mode
+    }
+
     # When executed via irm|iex, $MyInvocation.PSCommandPath is empty
     # In this case, default to 'boxer' mode for installation
     if (-not $MyInvocation.PSCommandPath) {
@@ -114,22 +120,24 @@ function Import-ModeModules {
 function Register-EmbeddedCommands {
     param([string]$Mode)
 
-    # For embedded versions, register known commands
-    if ($Mode -eq 'boxer') {
-        $script:Commands['init'] = 'Invoke-Boxer-Init'
-        $script:Commands['install'] = 'Install-Box'
-        $script:Commands['list'] = 'Invoke-Boxer-List'
-        $script:Commands['version'] = 'Invoke-Boxer-Version'
-    }
-    elseif ($Mode -eq 'box') {
-        $script:Commands['install'] = 'Invoke-Box-Install'
-        $script:Commands['env'] = 'Invoke-Box-Env'
-        $script:Commands['clean'] = 'Invoke-Box-Clean'
-        $script:Commands['status'] = 'Invoke-Box-Status'
-        $script:Commands['uninstall'] = 'Invoke-Box-Uninstall'
-        $script:Commands['load'] = 'Invoke-Box-Load'
-        $script:Commands['info'] = 'Invoke-Box-Info'
-        $script:Commands['version'] = 'Invoke-Box-Version'
+    # For embedded versions, discover commands dynamically by scanning loaded functions
+    $prefix = "Invoke-$Mode-"
+    $functions = Get-Command -Name "$prefix*" -CommandType Function -ErrorAction SilentlyContinue
+    
+    foreach ($func in $functions) {
+        $funcName = $func.Name
+        # Extract command name: Invoke-Box-Install → install, Invoke-Box-Env-List → env
+        $commandName = $funcName.Substring($prefix.Length).ToLower()
+        
+        # For sub-commands (env-list), keep only base command
+        if ($commandName -match '^([^-]+)-') {
+            $commandName = $matches[1]
+        }
+        
+        if (-not $script:Commands.ContainsKey($commandName)) {
+            $script:Commands[$commandName] = $funcName
+            Write-Verbose "Registered command: $commandName → $funcName"
+        }
     }
 }
 
