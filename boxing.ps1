@@ -288,5 +288,3 @@ function Initialize-Boxing {
         return 1
     }
 }
-
-# Note: Export-ModuleMember removed - not needed in standalone scripts
