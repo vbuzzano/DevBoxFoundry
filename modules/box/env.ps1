@@ -18,7 +18,7 @@ function Invoke-Box-Env {
     box env replace KEY=VALUE
     box env update
     #>
-    
+
     param(
         [Parameter(Position=0)]
         [string]$Sub

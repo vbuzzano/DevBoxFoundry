@@ -172,9 +172,9 @@ function Show-Help {
     Write-Host "Boxing - Reproducible Environment Manager" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Yellow
-    
+
     $cmdName = if ($script:Mode -eq 'boxer') { 'boxer' } else { 'box' }
-    
+
     # Generate help from registered commands dynamically
     if ($script:Commands.Count -gt 0) {
         $sortedCommands = $script:Commands.Keys | Sort-Object

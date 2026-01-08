@@ -123,17 +123,17 @@ function Register-EmbeddedCommands {
     # For embedded versions, discover commands dynamically by scanning loaded functions
     $prefix = "Invoke-$Mode-"
     $functions = Get-Command -Name "$prefix*" -CommandType Function -ErrorAction SilentlyContinue
-    
+
     foreach ($func in $functions) {
         $funcName = $func.Name
         # Extract command name: Invoke-Box-Install → install, Invoke-Box-Env-List → env
         $commandName = $funcName.Substring($prefix.Length).ToLower()
-        
+
         # For sub-commands (env-list), keep only base command
         if ($commandName -match '^([^-]+)-') {
             $commandName = $matches[1]
         }
-        
+
         if (-not $script:Commands.ContainsKey($commandName)) {
             $script:Commands[$commandName] = $funcName
             Write-Verbose "Registered command: $commandName → $funcName"
