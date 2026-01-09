@@ -19,7 +19,7 @@ function Show-PackageState {
     .EXAMPLE
     Show-PackageState
     #>
-    
+
     $statePath = Join-Path $ProjectRoot ".box\state.json"
 
     if (-not (Test-Path $statePath)) {
@@ -32,7 +32,7 @@ function Show-PackageState {
 
     try {
         $state = Get-Content $statePath -Raw | ConvertFrom-Json
-        
+
         Write-Host ""
         Write-Host "Package State (.box/state.json):" -ForegroundColor Cyan
         Write-Host ""

@@ -32,7 +32,7 @@ function Test-Assertion {
         [bool]$Condition,
         [string]$ErrorMessage = ""
     )
-    
+
     if ($Condition) {
         Write-Host "  ✓ $Name" -ForegroundColor Green
         $script:TestsPassed++
@@ -59,11 +59,11 @@ Test-Assertion `
 
 if (Test-Path $versionFile) {
     $version = (Get-Content $versionFile -Raw).Trim()
-    
+
     Test-Assertion `
         -Name "boxer.version is not empty" `
         -Condition (-not [string]::IsNullOrWhiteSpace($version))
-    
+
     Test-Assertion `
         -Name "boxer.version follows semantic versioning (X.Y.Z)" `
         -Condition ($version -match '^\d+\.\d+\.\d+$') `
@@ -82,15 +82,15 @@ Write-Host "Test Group: Version Detection Sources" -ForegroundColor Cyan
 $versionScript = "core\version.ps1"
 if (Test-Path $versionScript) {
     . $versionScript
-    
+
     $script:BoxingRoot = Get-Location
     $detectedVersion = Get-BoxerVersion
-    
+
     Test-Assertion `
         -Name "Get-BoxerVersion returns a value" `
         -Condition (-not [string]::IsNullOrWhiteSpace($detectedVersion)) `
         -ErrorMessage "Returned: '$detectedVersion'"
-    
+
     if ($detectedVersion) {
         Test-Assertion `
             -Name "Detected version matches boxer.version file" `
@@ -120,15 +120,15 @@ Test-Assertion `
 
 if (Test-Path $buildScript) {
     $buildContent = Get-Content $buildScript -Raw
-    
+
     Test-Assertion `
         -Name "Build script reads boxer.version file" `
         -Condition ($buildContent -match 'boxer\.version')
-    
+
     Test-Assertion `
         -Name "Build script increments version" `
         -Condition ($buildContent -match '\$build\+\+')
-    
+
     Test-Assertion `
         -Name "Build script writes new version back" `
         -Condition ($buildContent -match 'Set-Content\s+.*\$VersionFile')
@@ -145,24 +145,24 @@ Write-Host "Test Group: Dual-Version Tracking (Version + BoxerVersion)" -Foregro
 $metadataFile = "boxers\AmiDevBox\metadata.psd1"
 if (Test-Path $metadataFile) {
     $metadataContent = Get-Content $metadataFile -Raw
-    
+
     Test-Assertion `
         -Name "metadata.psd1 contains Version field" `
         -Condition ($metadataContent -match 'Version\s*=')
-    
+
     Test-Assertion `
         -Name "metadata.psd1 contains BoxerVersion field" `
         -Condition ($metadataContent -match 'BoxerVersion\s*=')
-    
+
     # Parse metadata
     try {
         $metadata = Import-PowerShellDataFile $metadataFile
-        
+
         Test-Assertion `
             -Name "Version field is valid semantic version" `
             -Condition ($metadata.Version -match '^\d+\.\d+\.\d+$') `
             -ErrorMessage "Version: $($metadata.Version)"
-        
+
         Test-Assertion `
             -Name "BoxerVersion field is valid semantic version" `
             -Condition ($metadata.BoxerVersion -match '^\d+\.\d+\.\d+$') `
@@ -190,15 +190,15 @@ Write-Host "Test Group: Smart Update Logic" -ForegroundColor Cyan
 $installScript = "modules\boxer\install.ps1"
 if (Test-Path $installScript) {
     $installContent = Get-Content $installScript -Raw
-    
+
     Test-Assertion `
         -Name "install.ps1 has Get-InstalledBoxVersion function" `
         -Condition ($installContent -match 'function Get-InstalledBoxVersion')
-    
+
     Test-Assertion `
         -Name "install.ps1 has Get-RemoteBoxVersion function" `
         -Condition ($installContent -match 'function Get-RemoteBoxVersion')
-    
+
     Test-Assertion `
         -Name "install.ps1 compares versions before install" `
         -Condition ($installContent -match 'Get-InstalledBoxVersion' -and $installContent -match 'Get-RemoteBoxVersion')

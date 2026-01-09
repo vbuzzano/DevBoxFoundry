@@ -54,11 +54,11 @@ function Invoke-Box-Pkg {
                 Write-Error "Package name required. Usage: box pkg install <name>"
                 return
             }
-            
+
             # Find package definition in config
             $packageName = $Args[0]
             $package = $AllPackages | Where-Object { $_.Name -eq $packageName }
-            
+
             if (-not $package) {
                 Write-Error "Package '$packageName' not found in config.psd1"
                 Write-Host "Available packages:" -ForegroundColor Gray
@@ -67,7 +67,7 @@ function Invoke-Box-Pkg {
                 }
                 return
             }
-            
+
             Process-Package -Item $package
         }
 
@@ -80,7 +80,7 @@ function Invoke-Box-Pkg {
             Write-Host ""
             Write-Host "Validating package dependencies..." -ForegroundColor Cyan
             Write-Host ""
-            
+
             $hasErrors = $false
             foreach ($pkg in $AllPackages) {
                 try {
@@ -92,7 +92,7 @@ function Invoke-Box-Pkg {
                     $hasErrors = $true
                 }
             }
-            
+
             Write-Host ""
             if ($hasErrors) {
                 Write-Host "Some packages have dependency issues" -ForegroundColor Yellow
@@ -106,7 +106,7 @@ function Invoke-Box-Pkg {
                 Write-Error "Package name required. Usage: box pkg uninstall <name>"
                 return
             }
-            
+
             $packageName = $Args[0]
             Remove-Package -Name $packageName
         }
@@ -133,25 +133,25 @@ function Show-PkgHelp {
     .EXAMPLE
     Show-PkgHelp
     #>
-    
+
     Write-Host ""
     Write-Host "Package Management Commands:" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  box pkg install <name>    " -NoNewline -ForegroundColor White
     Write-Host "Install specific package" -ForegroundColor Gray
-    
+
     Write-Host "  box pkg list              " -NoNewline -ForegroundColor White
     Write-Host "List installed packages" -ForegroundColor Gray
-    
+
     Write-Host "  box pkg validate          " -NoNewline -ForegroundColor White
     Write-Host "Validate package dependencies" -ForegroundColor Gray
-    
+
     Write-Host "  box pkg uninstall <name>  " -NoNewline -ForegroundColor White
     Write-Host "Remove package" -ForegroundColor Gray
-    
+
     Write-Host "  box pkg state             " -NoNewline -ForegroundColor White
     Write-Host "Display package state" -ForegroundColor Gray
-    
+
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Cyan
     Write-Host "  box pkg install NDK39" -ForegroundColor DarkGray
