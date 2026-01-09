@@ -627,40 +627,7 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
         }
 
         # Modify PowerShell profile
-        Write-Step "Configuring PowerShell profile..."
-
-        # Create profile directory if needed
-        $ProfileDir = Split-Path $ProfilePath -Parent
-        if (-not (Test-Path $ProfileDir)) {
-            New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
-        }
-
-        # Read existing profile or create empty
-        $ProfileContent = ""
-        if (Test-Path $ProfilePath) {
-            $ProfileContent = Get-Content $ProfilePath -Raw
-        }
-
-        # Check if #region boxing already exists
-        if ($ProfileContent -match '#region boxing') {
-            Write-Success "Profile ready"
-        } else {
-            # Add Boxing region to profile (lightweight dot-source approach)
-            $BoxingRegion = @"
-
-#region boxing
-`$boxingInit = "`$env:USERPROFILE\Documents\PowerShell\Boxing\init.ps1"
-if (Test-Path `$boxingInit) {
-    . `$boxingInit
-}
-#endregion boxing
-"@
-
-            # Append to profile
-            $ProfileContent += $BoxingRegion
-            Set-Content -Path $ProfilePath -Value $ProfileContent -Encoding UTF8
-            Write-Success "Profile configured"
-        }
+        Add-BoxingToProfile
 
         # Install box if this is a box repository (not Boxing main repo)
         if ($SourceRepo) {
