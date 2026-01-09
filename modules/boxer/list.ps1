@@ -37,8 +37,8 @@ function Invoke-Boxer-List {
     }
 
     $boxes = Get-ChildItem -Path $boxesPath -Directory -ErrorAction SilentlyContinue
-    
-    if (-not $boxes -or $boxes.Count -eq 0) {
+
+    if (-not $boxes -or @($boxes).Count -eq 0) {
         Write-Host "  No boxes installed yet." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "  To install a box, run:" -ForegroundColor Gray
@@ -49,16 +49,16 @@ function Invoke-Boxer-List {
 
     # Display installed boxes with version and description
     $hasValidBoxes = $false
-    
+
     foreach ($boxDir in $boxes) {
         $metadataPath = Join-Path $boxDir.FullName "metadata.psd1"
-        
+
         if (Test-Path $metadataPath) {
             try {
                 $metadata = Import-PowerShellDataFile $metadataPath
-                $version = if ($metadata.Version) { "v$($metadata.Version)" } else { "(no version)" }
-                $description = if ($metadata.Description) { $metadata.Description } else { "(no description)" }
-                
+                $version = if ($metadata.ContainsKey('Version')) { "v$($metadata.Version)" } else { "(no version)" }
+                $description = if ($metadata.ContainsKey('Description')) { $metadata.Description } else { "(no description)" }
+
                 Write-Host ("  {0,-20} {1,-12} - {2}" -f $boxDir.Name, $version, $description) -ForegroundColor White
                 $hasValidBoxes = $true
             }
@@ -76,7 +76,7 @@ function Invoke-Boxer-List {
             $hasValidBoxes = $true
         }
     }
-    
+
     if (-not $hasValidBoxes) {
         Write-Host "  No valid boxes found in: $boxesPath" -ForegroundColor Yellow
     }
