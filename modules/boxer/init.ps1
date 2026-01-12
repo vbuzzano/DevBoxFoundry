@@ -673,7 +673,7 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
 
                 & $boxScript @args
             }
-            
+
             Write-Success "✓ Boxing functions loaded (boxer, box)"
         }
 

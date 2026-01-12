@@ -53,13 +53,13 @@ Write-Host "Test 4: Override module execution (isolated)" -ForegroundColor Yello
 try {
     # Dot-source the override module
     . $overrideModulePath
-    
+
     # Call function and check it exists
     $functionExists = Get-Command -Name Invoke-Box-Install -ErrorAction SilentlyContinue
-    
+
     if ($functionExists) {
         Write-Host "  ✓ PASS: Override module loaded successfully" -ForegroundColor Green
-        
+
         # Execute to verify no errors
         Invoke-Box-Install -Arguments @("test-package") | Out-Null
         Write-Host "  ✓ PASS: Override module executes without errors" -ForegroundColor Green
