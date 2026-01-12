@@ -635,8 +635,7 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
         }
 
         # Determine if we need to load functions in current session
-        $ProfileNeedsConfig = -not ($ProfileContent -match '#region boxing')
-        $FunctionsNeedLoading = $ProfileNeedsConfig -or -not (Get-Command -Name boxer -ErrorAction SilentlyContinue)
+        $FunctionsNeedLoading = -not (Get-Command -Name boxer -ErrorAction SilentlyContinue)
 
         # Load functions in current session only if needed (profile not configured or function missing)
         if ($FunctionsNeedLoading) {
