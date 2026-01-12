@@ -673,21 +673,25 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
 
                 & $boxScript @args
             }
+            
+            Write-Success "✓ Boxing functions loaded (boxer, box)"
         }
 
         # Display appropriate completion message
         if (-not $BoxerAlreadyInstalled) {
             # First installation
-            Write-Success "✓ Boxing functions loaded (boxer, box)"
             Write-Success "Boxing system installed successfully!"
             Write-Host ""
             Write-Host "  Ready to use! Try:" -ForegroundColor Cyan
             Write-Host "    boxer init MyProject" -ForegroundColor White
             Write-Host ""
-            Write-Host "  💡 Recommended: Restart PowerShell for permanent installation" -ForegroundColor Yellow
-            Write-Host "     (functions work now, but restart ensures they persist)" -ForegroundColor DarkGray
+        } else {
+            # Update completed
+            Write-Host ""
+            Write-Host "  ✓ Boxer updated successfully!" -ForegroundColor Green
+            Write-Host "  Ready to use: boxer init MyProject" -ForegroundColor Cyan
+            Write-Host ""
         }
-        # Update or already up-to-date: no additional message needed
 
     } catch {
         Write-Host "Installation failed: $_" -ForegroundColor Red
