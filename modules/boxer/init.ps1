@@ -682,14 +682,19 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
             # First installation
             Write-Success "Boxing system installed successfully!"
             Write-Host ""
-            Write-Host "  Ready to use! Try:" -ForegroundColor Cyan
+            Write-Host "  To use boxing in this session:" -ForegroundColor Cyan
+            Write-Host "    . `$env:USERPROFILE\Documents\PowerShell\Boxing\init.ps1" -ForegroundColor White
+            Write-Host ""
+            Write-Host "  Or restart PowerShell and run:" -ForegroundColor Cyan
             Write-Host "    boxer init MyProject" -ForegroundColor White
             Write-Host ""
         } else {
             # Update completed
             Write-Host ""
             Write-Host "  ✓ Boxer updated successfully!" -ForegroundColor Green
-            Write-Host "  Ready to use: boxer init MyProject" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "  Restart PowerShell or run:" -ForegroundColor Cyan
+            Write-Host "    . `$env:USERPROFILE\Documents\PowerShell\Boxing\init.ps1" -ForegroundColor White
             Write-Host ""
         }
 
