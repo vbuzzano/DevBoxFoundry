@@ -91,24 +91,57 @@ function Import-ModeModules {
         return
     }
 
-    $modulesPath = Join-Path $script:BoxingRoot "modules\$Mode"
+    # Collect module files from multiple sources with priority order
+    $allModules = @{}
 
-    if (-not (Test-Path $modulesPath)) {
+    # Priority 1: Box-specific modules (.box/modules/) - highest priority
+    $boxModulesPath = Join-Path (Get-Location) ".box\modules"
+    if (Test-Path $boxModulesPath) {
+        $boxModuleFiles = Get-ChildItem -Path $boxModulesPath -Filter '*.ps1' -ErrorAction SilentlyContinue
+        foreach ($file in $boxModuleFiles) {
+            $commandName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+            if (-not $allModules.ContainsKey($commandName)) {
+                $allModules[$commandName] = @{
+                    File = $file
+                    Source = 'box-override'
+                }
+            }
+        }
+    }
+
+    # Priority 2: Core modules (modules/$Mode/) - fallback
+    $modulesPath = Join-Path $script:BoxingRoot "modules\$Mode"
+    if (Test-Path $modulesPath) {
+        $moduleFiles = Get-ChildItem -Path $modulesPath -Filter '*.ps1' | Sort-Object Name
+        foreach ($file in $moduleFiles) {
+            $commandName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+            if (-not $allModules.ContainsKey($commandName)) {
+                $allModules[$commandName] = @{
+                    File = $file
+                    Source = 'core'
+                }
+            }
+        }
+    }
+
+    if ($allModules.Count -eq 0) {
         Write-Verbose "No modules found for mode: $Mode"
         return
     }
 
-    $moduleFiles = Get-ChildItem -Path $modulesPath -Filter '*.ps1' | Sort-Object Name
+    # Load all collected modules
+    foreach ($commandName in $allModules.Keys) {
+        $moduleInfo = $allModules[$commandName]
+        $file = $moduleInfo.File
+        $source = $moduleInfo.Source
 
-    foreach ($file in $moduleFiles) {
         try {
             . $file.FullName
 
-            $commandName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
             $script:Commands[$commandName] = $file.FullName
             $script:LoadedModules[$file.Name] = $file.FullName
 
-            Write-Verbose "Loaded module: $Mode/$($file.Name)"
+            Write-Verbose "Loaded module ($source): $Mode/$($file.Name)"
         }
         catch {
             Write-Warning "Failed to load module $($file.Name): $_"

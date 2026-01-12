@@ -1,18 +1,130 @@
 # ============================================================================
-# Boxer Install Module
+# Boxer Install Command Dispatcher
 # ============================================================================
-#
-# Handles boxer install command - installing boxes from GitHub URLs
+
+function Invoke-Boxer-Install {
+    <#
+    .SYNOPSIS
+    Boxer install command dispatcher.
+
+    .PARAMETER Arguments
+    Command arguments (box name or GitHub URL).
+
+    .EXAMPLE
+    boxer install AmiDevBox
+    boxer install https://github.com/vbuzzano/AmiDevBox
+    #>
+    param(
+        [Parameter(ValueFromRemainingArguments=$true)]
+        [string[]]$Arguments
+    )
+
+    if (-not $Arguments -or $Arguments.Count -eq 0) {
+        Write-Host ""
+        Write-Host "Usage: boxer install <box-name|github-url>" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Install from registry:" -ForegroundColor Yellow
+        Write-Host "  boxer install AmiDevBox" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "Install from GitHub URL:" -ForegroundColor Yellow
+        Write-Host "  boxer install https://github.com/user/BoxName" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "Available boxes:" -ForegroundColor Cyan
+        foreach ($boxName in $script:BoxRegistry.Keys | Sort-Object) {
+            $url = $script:BoxRegistry[$boxName]
+            Write-Host "  - $boxName" -ForegroundColor White -NoNewline
+            Write-Host " ($url)" -ForegroundColor DarkGray
+        }
+        Write-Host ""
+        return
+    }
+
+    # Get box name or URL from first argument
+    $boxNameOrUrl = $Arguments[0]
+
+    # Call Install-Box
+    Install-Box -BoxUrl $boxNameOrUrl
+}
+
+# ============================================================================
+# Box Registry - Maps simple names to GitHub repository URLs
+# ============================================================================
+
+$script:BoxRegistry = @{
+    'AmiDevBox' = 'https://github.com/vbuzzano/AmiDevBox'
+    # 'BoxBuilder' = 'https://github.com/vbuzzano/BoxBuilder'  # Commented out until box exists
+}
+
+# ============================================================================
+# Box URL Resolution
+# ============================================================================
+
+function Get-BoxUrl {
+    <#
+    .SYNOPSIS
+    Resolves a box name or URL to a full GitHub repository URL.
+
+    .PARAMETER NameOrUrl
+    Either a simple box name (e.g., "AmiDevBox") or a full GitHub URL.
+
+    .RETURNS
+    Full GitHub repository URL.
+
+    .EXAMPLE
+    Get-BoxUrl "AmiDevBox"
+    Returns: https://github.com/vbuzzano/AmiDevBox
+
+    .EXAMPLE
+    Get-BoxUrl "https://github.com/user/CustomBox"
+    Returns: https://github.com/user/CustomBox (passthrough)
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$NameOrUrl
+    )
+
+    # If already a URL, return as-is (passthrough)
+    if ($NameOrUrl -match '^https?://') {
+        return $NameOrUrl
+    }
+
+    # Try to resolve from registry
+    if ($script:BoxRegistry.ContainsKey($NameOrUrl)) {
+        return $script:BoxRegistry[$NameOrUrl]
+    }
+
+    # Not found in registry
+    Write-Host ""
+    Write-Host "Box '$NameOrUrl' not found in registry." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Available boxes:" -ForegroundColor Cyan
+    foreach ($boxName in $script:BoxRegistry.Keys | Sort-Object) {
+        $url = $script:BoxRegistry[$boxName]
+        Write-Host "  - $boxName" -ForegroundColor White -NoNewline
+        Write-Host " ($url)" -ForegroundColor DarkGray
+    }
+    Write-Host ""
+    Write-Host "You can also install from any GitHub URL:" -ForegroundColor Cyan
+    Write-Host "  boxer install https://github.com/user/BoxName" -ForegroundColor DarkGray
+    Write-Host ""
+
+    throw "Box '$NameOrUrl' not found"
+}
+
+# ============================================================================
+# Box Installation
+# ============================================================================
 
 function Install-Box {
     <#
     .SYNOPSIS
-    Installs a box from a GitHub URL.
+    Installs a box from GitHub URL or simple name.
 
     .PARAMETER BoxUrl
-    GitHub repository URL (e.g., https://github.com/user/BoxName)
+    GitHub repository URL or simple box name (e.g., "AmiDevBox").
 
     .EXAMPLE
+    boxer install AmiDevBox
     boxer install https://github.com/vbuzzano/AmiDevBox
     #>
     param(
@@ -20,11 +132,20 @@ function Install-Box {
         [string]$BoxUrl
     )
 
-    Write-Step "Installing box from $BoxUrl..."
+    # Resolve name to URL if needed
+    try {
+        $resolvedUrl = Get-BoxUrl -NameOrUrl $BoxUrl
+    }
+    catch {
+        Write-Error $_.Exception.Message
+        return
+    }
+
+    Write-Step "Installing box from $resolvedUrl..."
 
     try {
         # Parse GitHub URL to extract owner, repo, branch
-        if ($BoxUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$') {
+        if ($resolvedUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$') {
             $Owner = $Matches['owner']
             $Repo = $Matches['repo']
             $BoxName = $Repo
@@ -190,4 +311,135 @@ function Get-RemoteBoxVersion {
     }
 
     return $null
+}
+
+# ============================================================================
+# PowerShell Profile Integration
+# ============================================================================
+
+function Add-BoxingToProfile {
+    <#
+    .SYNOPSIS
+    Adds boxer and box functions to PowerShell profile for automatic availability.
+
+    .DESCRIPTION
+    Integrates Boxing System into user's PowerShell profile by adding:
+    - boxer() function wrapper for global box management
+    - box() function wrapper for project commands
+
+    Uses #region boxing markers for idempotent operation (won't duplicate on reinstall).
+
+    .EXAMPLE
+    Add-BoxingToProfile
+    #>
+
+    try {
+        # Determine profile path
+        $ProfilePath = $PROFILE.CurrentUserCurrentHost
+        $BoxerPath = Join-Path $env:USERPROFILE "Documents\PowerShell\Boxing\boxer.ps1"
+
+        Write-Step "Integrating Boxing into PowerShell profile..."
+
+        # Create profile directory if needed
+        $ProfileDir = Split-Path $ProfilePath -Parent
+        if (-not (Test-Path $ProfileDir)) {
+            Write-Verbose "Creating profile directory: $ProfileDir"
+            New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
+        }
+
+        # Check if profile already has boxing region
+        $hasBoxingRegion = $false
+        if (Test-Path $ProfilePath) {
+            $profileContent = Get-Content $ProfilePath -Raw
+            if ($profileContent -match '#region boxing') {
+                $hasBoxingRegion = $true
+            }
+        }
+
+        if ($hasBoxingRegion) {
+            Write-Host "  ✓ Boxing already integrated in profile (idempotent)" -ForegroundColor Green
+            return
+        }
+
+        # Profile content to add
+        $boxingRegion = @"
+
+#region boxing
+# Boxing System Integration
+# Auto-generated by boxer installation
+
+function boxer {
+    `$boxerPath = "$BoxerPath"
+    if (Test-Path `$boxerPath) {
+        & `$boxerPath `$args
+    } else {
+        Write-Error "boxer.ps1 not found at `$boxerPath. Please reinstall Boxing System."
+    }
+}
+
+function box {
+    # Search for box.ps1 in current directory and parent directories
+    `$currentDir = Get-Location
+    `$searchPath = `$currentDir
+    `$maxDepth = 5  # Prevent infinite loops
+    `$depth = 0
+
+    while (`$depth -lt `$maxDepth) {
+        `$boxPath = Join-Path `$searchPath "box.ps1"
+        if (Test-Path `$boxPath) {
+            & `$boxPath `$args
+            return
+        }
+
+        # Move to parent directory
+        `$parent = Split-Path `$searchPath -Parent
+        if (-not `$parent -or `$parent -eq `$searchPath) {
+            break  # Reached filesystem root
+        }
+        `$searchPath = `$parent
+        `$depth++
+    }
+
+    Write-Error "box.ps1 not found in current directory or parent directories (searched up to `$depth levels)"
+}
+
+#endregion boxing
+"@
+
+        # Append to profile
+        if (-not (Test-Path $ProfilePath)) {
+            # Create new profile
+            $boxingRegion | Set-Content -Path $ProfilePath -Encoding UTF8
+            Write-Host "  ✓ Created profile with Boxing integration" -ForegroundColor Green
+        } else {
+            # Append to existing profile
+            $boxingRegion | Add-Content -Path $ProfilePath -Encoding UTF8
+            Write-Host "  ✓ Added Boxing integration to existing profile" -ForegroundColor Green
+        }
+
+        Write-Host ""
+        Write-Host "  PowerShell profile updated successfully!" -ForegroundColor Cyan
+        Write-Host "  Location: $ProfilePath" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "  To use boxer and box in this session, run:" -ForegroundColor Yellow
+        Write-Host "    . `$PROFILE" -ForegroundColor White
+        Write-Host ""
+        Write-Host "  Or simply open a new PowerShell window." -ForegroundColor Yellow
+        Write-Host ""
+
+    } catch {
+        # Handle permission errors gracefully
+        if ($_.Exception.Message -match "Access.*denied|UnauthorizedAccessException") {
+            Write-Host ""
+            Write-Host "  ⚠ Profile integration failed: Permission denied" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "  To fix this:" -ForegroundColor Cyan
+            Write-Host "    1. Run PowerShell as Administrator" -ForegroundColor White
+            Write-Host "    2. Or manually add boxing functions to your profile:" -ForegroundColor White
+            Write-Host "       notepad `$PROFILE" -ForegroundColor DarkGray
+            Write-Host ""
+        } else {
+            Write-Warning "Profile integration failed: $($_.Exception.Message)"
+        }
+    }
 }
