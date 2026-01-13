@@ -1,0 +1,583 @@
+diff --git a/boxing.ps1 b/boxing.ps1
+index e43fcdd..c251e1d 100644
+--- a/boxing.ps1
++++ b/boxing.ps1
+@@ -91,24 +91,57 @@ function Import-ModeModules {
+         return
+     }
+ 
++    # Collect module files from multiple sources with priority order
++    $allModules = @{}
++
++    # Priority 1: Box-specific modules (.box/modules/) - highest priority
++    $boxModulesPath = Join-Path (Get-Location) ".box\modules"
++    if (Test-Path $boxModulesPath) {
++        $boxModuleFiles = Get-ChildItem -Path $boxModulesPath -Filter '*.ps1' -ErrorAction SilentlyContinue
++        foreach ($file in $boxModuleFiles) {
++            $commandName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
++            if (-not $allModules.ContainsKey($commandName)) {
++                $allModules[$commandName] = @{
++                    File = $file
++                    Source = 'box-override'
++                }
++            }
++        }
++    }
++
++    # Priority 2: Core modules (modules/$Mode/) - fallback
+     $modulesPath = Join-Path $script:BoxingRoot "modules\$Mode"
++    if (Test-Path $modulesPath) {
++        $moduleFiles = Get-ChildItem -Path $modulesPath -Filter '*.ps1' | Sort-Object Name
++        foreach ($file in $moduleFiles) {
++            $commandName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
++            if (-not $allModules.ContainsKey($commandName)) {
++                $allModules[$commandName] = @{
++                    File = $file
++                    Source = 'core'
++                }
++            }
++        }
++    }
+ 
+-    if (-not (Test-Path $modulesPath)) {
++    if ($allModules.Count -eq 0) {
+         Write-Verbose "No modules found for mode: $Mode"
+         return
+     }
+ 
+-    $moduleFiles = Get-ChildItem -Path $modulesPath -Filter '*.ps1' | Sort-Object Name
++    # Load all collected modules
++    foreach ($commandName in $allModules.Keys) {
++        $moduleInfo = $allModules[$commandName]
++        $file = $moduleInfo.File
++        $source = $moduleInfo.Source
+ 
+-    foreach ($file in $moduleFiles) {
+         try {
+             . $file.FullName
+ 
+-            $commandName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+             $script:Commands[$commandName] = $file.FullName
+             $script:LoadedModules[$file.Name] = $file.FullName
+ 
+-            Write-Verbose "Loaded module: $Mode/$($file.Name)"
++            Write-Verbose "Loaded module ($source): $Mode/$($file.Name)"
+         }
+         catch {
+             Write-Warning "Failed to load module $($file.Name): $_"
+diff --git a/modules/box/pkg.ps1 b/modules/box/pkg.ps1
+new file mode 100644
+index 0000000..0e65cdc
+--- /dev/null
++++ b/modules/box/pkg.ps1
+@@ -0,0 +1,161 @@
++# ============================================================================
++# Package Management Dispatcher
++# ============================================================================
++#
++# Provides pkg subcommand dispatcher for direct package management CLI access.
++# Routes commands: install, list, validate, uninstall, state
++
++function Invoke-Box-Pkg {
++    <#
++    .SYNOPSIS
++    Package management dispatcher for box pkg subcommands.
++
++    .DESCRIPTION
++    Routes pkg subcommands to appropriate handlers:
++    - install: Install specific package by name
++    - list: Display all installed packages
++    - validate: Check package dependencies
++    - uninstall: Remove specific package
++    - state: Display package state from state.json
++    - (no subcommand): Display help
++
++    .PARAMETER Subcommand
++    Package action to perform (install, list, validate, uninstall, state)
++
++    .PARAMETER Args
++    Arguments to pass to the subcommand handler
++
++    .EXAMPLE
++    Invoke-Box-Pkg 'list'
++    Displays all installed packages
++
++    .EXAMPLE
++    Invoke-Box-Pkg 'install' @('NDK39')
++    Installs the NDK39 package
++    #>
++    param(
++        [Parameter(Position=0)]
++        [string]$Subcommand,
++
++        [Parameter(Position=1, ValueFromRemainingArguments=$true)]
++        [string[]]$Args
++    )
++
++    # No subcommand or empty string -> show help
++    if ([string]::IsNullOrWhiteSpace($Subcommand)) {
++        Show-PkgHelp
++        return
++    }
++
++    # Route to appropriate handler
++    switch ($Subcommand.ToLower()) {
++        'install' {
++            if ($Args.Count -eq 0) {
++                Write-Error "Package name required. Usage: box pkg install <name>"
++                return
++            }
++
++            # Find package definition in config
++            $packageName = $Args[0]
++            $package = $AllPackages | Where-Object { $_.Name -eq $packageName }
++
++            if (-not $package) {
++                Write-Error "Package '$packageName' not found in config.psd1"
++                Write-Host "Available packages:" -ForegroundColor Gray
++                foreach ($pkg in $AllPackages) {
++                    Write-Host "  - $($pkg.Name)" -ForegroundColor DarkGray
++                }
++                return
++            }
++
++            Process-Package -Item $package
++        }
++
++        'list' {
++            Show-PackageList
++        }
++
++        'validate' {
++            # Validate all packages
++            Write-Host ""
++            Write-Host "Validating package dependencies..." -ForegroundColor Cyan
++            Write-Host ""
++
++            $hasErrors = $false
++            foreach ($pkg in $AllPackages) {
++                try {
++                    $envs = Validate-PackageDependencies -Package $pkg
++                    Write-Host "  Γ£ô $($pkg.Name): Dependencies satisfied" -ForegroundColor Green
++                }
++                catch {
++                    Write-Host "  Γ£ù $($pkg.Name): $_" -ForegroundColor Red
++                    $hasErrors = $true
++                }
++            }
++
++            Write-Host ""
++            if ($hasErrors) {
++                Write-Host "Some packages have dependency issues" -ForegroundColor Yellow
++            } else {
++                Write-Host "All package dependencies validated successfully" -ForegroundColor Green
++            }
++        }
++
++        'uninstall' {
++            if ($Args.Count -eq 0) {
++                Write-Error "Package name required. Usage: box pkg uninstall <name>"
++                return
++            }
++
++            $packageName = $Args[0]
++            Remove-Package -Name $packageName
++        }
++
++        'state' {
++            Show-PackageState
++        }
++
++        default {
++            Write-Error "Unknown pkg subcommand: $Subcommand. Run 'box pkg' for help."
++            Show-PkgHelp
++        }
++    }
++}
++
++function Show-PkgHelp {
++    <#
++    .SYNOPSIS
++    Displays help text for pkg subcommands.
++
++    .DESCRIPTION
++    Shows available pkg subcommands with descriptions and usage examples.
++
++    .EXAMPLE
++    Show-PkgHelp
++    #>
++
++    Write-Host ""
++    Write-Host "Package Management Commands:" -ForegroundColor Cyan
++    Write-Host ""
++    Write-Host "  box pkg install <name>    " -NoNewline -ForegroundColor White
++    Write-Host "Install specific package" -ForegroundColor Gray
++
++    Write-Host "  box pkg list              " -NoNewline -ForegroundColor White
++    Write-Host "List installed packages" -ForegroundColor Gray
++
++    Write-Host "  box pkg validate          " -NoNewline -ForegroundColor White
++    Write-Host "Validate package dependencies" -ForegroundColor Gray
++
++    Write-Host "  box pkg uninstall <name>  " -NoNewline -ForegroundColor White
++    Write-Host "Remove package" -ForegroundColor Gray
++
++    Write-Host "  box pkg state             " -NoNewline -ForegroundColor White
++    Write-Host "Display package state" -ForegroundColor Gray
++
++    Write-Host ""
++    Write-Host "Examples:" -ForegroundColor Cyan
++    Write-Host "  box pkg install NDK39" -ForegroundColor DarkGray
++    Write-Host "  box pkg list" -ForegroundColor DarkGray
++    Write-Host "  box pkg state" -ForegroundColor DarkGray
++    Write-Host ""
++}
+diff --git a/modules/boxer/install.ps1 b/modules/boxer/install.ps1
+index 701ddd2..28478fa 100644
+--- a/modules/boxer/install.ps1
++++ b/modules/boxer/install.ps1
+@@ -1,18 +1,130 @@
+ # ============================================================================
+-# Boxer Install Module
++# Boxer Install Command Dispatcher
++# ============================================================================
++
++function Invoke-Boxer-Install {
++    <#
++    .SYNOPSIS
++    Boxer install command dispatcher.
++
++    .PARAMETER Arguments
++    Command arguments (box name or GitHub URL).
++
++    .EXAMPLE
++    boxer install AmiDevBox
++    boxer install https://github.com/vbuzzano/AmiDevBox
++    #>
++    param(
++        [Parameter(ValueFromRemainingArguments=$true)]
++        [string[]]$Arguments
++    )
++
++    if (-not $Arguments -or $Arguments.Count -eq 0) {
++        Write-Host ""
++        Write-Host "Usage: boxer install <box-name|github-url>" -ForegroundColor Cyan
++        Write-Host ""
++        Write-Host "Install from registry:" -ForegroundColor Yellow
++        Write-Host "  boxer install AmiDevBox" -ForegroundColor DarkGray
++        Write-Host ""
++        Write-Host "Install from GitHub URL:" -ForegroundColor Yellow
++        Write-Host "  boxer install https://github.com/user/BoxName" -ForegroundColor DarkGray
++        Write-Host ""
++        Write-Host "Available boxes:" -ForegroundColor Cyan
++        foreach ($boxName in $script:BoxRegistry.Keys | Sort-Object) {
++            $url = $script:BoxRegistry[$boxName]
++            Write-Host "  - $boxName" -ForegroundColor White -NoNewline
++            Write-Host " ($url)" -ForegroundColor DarkGray
++        }
++        Write-Host ""
++        return
++    }
++
++    # Get box name or URL from first argument
++    $boxNameOrUrl = $Arguments[0]
++
++    # Call Install-Box
++    Install-Box -BoxUrl $boxNameOrUrl
++}
++
++# ============================================================================
++# Box Registry - Maps simple names to GitHub repository URLs
++# ============================================================================
++
++$script:BoxRegistry = @{
++    'AmiDevBox' = 'https://github.com/vbuzzano/AmiDevBox'
++    # 'BoxBuilder' = 'https://github.com/vbuzzano/BoxBuilder'  # Commented out until box exists
++}
++
++# ============================================================================
++# Box URL Resolution
++# ============================================================================
++
++function Get-BoxUrl {
++    <#
++    .SYNOPSIS
++    Resolves a box name or URL to a full GitHub repository URL.
++
++    .PARAMETER NameOrUrl
++    Either a simple box name (e.g., "AmiDevBox") or a full GitHub URL.
++
++    .RETURNS
++    Full GitHub repository URL.
++
++    .EXAMPLE
++    Get-BoxUrl "AmiDevBox"
++    Returns: https://github.com/vbuzzano/AmiDevBox
++
++    .EXAMPLE
++    Get-BoxUrl "https://github.com/user/CustomBox"
++    Returns: https://github.com/user/CustomBox (passthrough)
++    #>
++    param(
++        [Parameter(Mandatory=$true)]
++        [string]$NameOrUrl
++    )
++
++    # If already a URL, return as-is (passthrough)
++    if ($NameOrUrl -match '^https?://') {
++        return $NameOrUrl
++    }
++
++    # Try to resolve from registry
++    if ($script:BoxRegistry.ContainsKey($NameOrUrl)) {
++        return $script:BoxRegistry[$NameOrUrl]
++    }
++
++    # Not found in registry
++    Write-Host ""
++    Write-Host "Box '$NameOrUrl' not found in registry." -ForegroundColor Red
++    Write-Host ""
++    Write-Host "Available boxes:" -ForegroundColor Cyan
++    foreach ($boxName in $script:BoxRegistry.Keys | Sort-Object) {
++        $url = $script:BoxRegistry[$boxName]
++        Write-Host "  - $boxName" -ForegroundColor White -NoNewline
++        Write-Host " ($url)" -ForegroundColor DarkGray
++    }
++    Write-Host ""
++    Write-Host "You can also install from any GitHub URL:" -ForegroundColor Cyan
++    Write-Host "  boxer install https://github.com/user/BoxName" -ForegroundColor DarkGray
++    Write-Host ""
++
++    throw "Box '$NameOrUrl' not found"
++}
++
++# ============================================================================
++# Box Installation
+ # ============================================================================
+-#
+-# Handles boxer install command - installing boxes from GitHub URLs
+ 
+ function Install-Box {
+     <#
+     .SYNOPSIS
+-    Installs a box from a GitHub URL.
++    Installs a box from GitHub URL or simple name.
+ 
+     .PARAMETER BoxUrl
+-    GitHub repository URL (e.g., https://github.com/user/BoxName)
++    GitHub repository URL or simple box name (e.g., "AmiDevBox").
+ 
+     .EXAMPLE
++    boxer install AmiDevBox
+     boxer install https://github.com/vbuzzano/AmiDevBox
+     #>
+     param(
+@@ -20,11 +132,20 @@ function Install-Box {
+         [string]$BoxUrl
+     )
+ 
+-    Write-Step "Installing box from $BoxUrl..."
++    # Resolve name to URL if needed
++    try {
++        $resolvedUrl = Get-BoxUrl -NameOrUrl $BoxUrl
++    }
++    catch {
++        Write-Error $_.Exception.Message
++        return
++    }
++
++    Write-Step "Installing box from $resolvedUrl..."
+ 
+     try {
+         # Parse GitHub URL to extract owner, repo, branch
+-        if ($BoxUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$') {
++        if ($resolvedUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$') {
+             $Owner = $Matches['owner']
+             $Repo = $Matches['repo']
+             $BoxName = $Repo
+@@ -191,3 +312,4 @@ function Get-RemoteBoxVersion {
+ 
+     return $null
+ }
++
+diff --git a/modules/boxer/list.ps1 b/modules/boxer/list.ps1
+index d8bad3a..7f809ca 100644
+--- a/modules/boxer/list.ps1
++++ b/modules/boxer/list.ps1
+@@ -2,34 +2,83 @@
+ # Boxer List Module
+ # ============================================================================
+ #
+-# Handles boxer list command - listing available boxes
++# Handles boxer list command - listing installed boxes from user installation directory
+ 
+ function Invoke-Boxer-List {
+     <#
+     .SYNOPSIS
+-    Lists all available Box types.
++    Lists all installed Box types from ~/Documents/PowerShell/Boxing/Boxes/.
++
++    .DESCRIPTION
++    Displays boxes that are actually installed on the user's system,
++    not development boxes in the repository.
+ 
+     .EXAMPLE
+     boxer list
+     #>
+     Write-Host ""
+-    Write-Host "Available Boxes:" -ForegroundColor Cyan
++    Write-Host "Installed Boxes:" -ForegroundColor Cyan
+     Write-Host ""
+ 
+-    $boxersPath = Join-Path (Split-Path -Parent $PSScriptRoot) "boxers"
++    # Read from user installation directory, not repository
++    $boxesPath = Join-Path $env:USERPROFILE "Documents\PowerShell\Boxing\Boxes"
++
++    if (-not (Test-Path $boxesPath)) {
++        Write-Host "  No boxes installed yet." -ForegroundColor Yellow
++        Write-Host ""
++        Write-Host "  To install a box, run:" -ForegroundColor Gray
++        Write-Host "    boxer install <box-name-or-url>" -ForegroundColor DarkGray
++        Write-Host ""
++        Write-Host "  Examples:" -ForegroundColor Gray
++        Write-Host "    boxer install AmiDevBox" -ForegroundColor DarkGray
++        Write-Host "    boxer install https://github.com/user/MyBox" -ForegroundColor DarkGray
++        Write-Host ""
++        return
++    }
++
++    $boxes = Get-ChildItem -Path $boxesPath -Directory -ErrorAction SilentlyContinue
++
++    if (-not $boxes -or @($boxes).Count -eq 0) {
++        Write-Host "  No boxes installed yet." -ForegroundColor Yellow
++        Write-Host ""
++        Write-Host "  To install a box, run:" -ForegroundColor Gray
++        Write-Host "    boxer install <box-name-or-url>" -ForegroundColor DarkGray
++        Write-Host ""
++        return
++    }
++
++    # Display installed boxes with version and description
++    $hasValidBoxes = $false
+ 
+-    if (Test-Path $boxersPath) {
+-        Get-ChildItem -Path $boxersPath -Directory | ForEach-Object {
+-            $metadataPath = Join-Path $_.FullName "metadata.psd1"
+-            if (Test-Path $metadataPath) {
++    foreach ($boxDir in $boxes) {
++        $metadataPath = Join-Path $boxDir.FullName "metadata.psd1"
++
++        if (Test-Path $metadataPath) {
++            try {
+                 $metadata = Import-PowerShellDataFile $metadataPath
+-                Write-Host ("  {0,-20} - {1}" -f $_.Name, $metadata.Description) -ForegroundColor White
+-            } else {
+-                Write-Host ("  {0,-20} - {1}" -f $_.Name, "(No description)") -ForegroundColor Gray
++                $version = if ($metadata.ContainsKey('Version')) { "v$($metadata.Version)" } else { "(no version)" }
++                $description = if ($metadata.ContainsKey('Description')) { $metadata.Description } else { "(no description)" }
++
++                Write-Host ("  {0,-20} {1,-12} - {2}" -f $boxDir.Name, $version, $description) -ForegroundColor White
++                $hasValidBoxes = $true
++            }
++            catch {
++                # Corrupted metadata.psd1 - show warning but continue
++                Write-Host ("  {0,-20} " -f $boxDir.Name) -NoNewline -ForegroundColor Yellow
++                Write-Host "(corrupted metadata)" -ForegroundColor DarkYellow
++                Write-Warning "Failed to read metadata for $($boxDir.Name): $_"
+             }
+         }
+-    } else {
+-        Write-Warn "No boxes found in: $boxersPath"
++        else {
++            # No metadata - still show the box
++            Write-Host ("  {0,-20} " -f $boxDir.Name) -NoNewline -ForegroundColor Gray
++            Write-Host "(no metadata)" -ForegroundColor DarkGray
++            $hasValidBoxes = $true
++        }
++    }
++
++    if (-not $hasValidBoxes) {
++        Write-Host "  No valid boxes found in: $boxesPath" -ForegroundColor Yellow
+     }
+ 
+     Write-Host ""
+diff --git a/modules/shared/pkg/state.ps1 b/modules/shared/pkg/state.ps1
+new file mode 100644
+index 0000000..3af2dbf
+--- /dev/null
++++ b/modules/shared/pkg/state.ps1
+@@ -0,0 +1,74 @@
++# ============================================================================
++# Package State Display Module
++# ============================================================================
++#
++# Functions for displaying package state information from .box/state.json.
++
++function Show-PackageState {
++    <#
++    .SYNOPSIS
++    Displays the current package state from .box/state.json.
++
++    .DESCRIPTION
++    Shows the raw package state for debugging purposes, including:
++    - Installation status
++    - Installed files and directories
++    - Environment variable configurations
++    - Installation timestamps
++
++    .EXAMPLE
++    Show-PackageState
++    #>
++
++    $statePath = Join-Path $ProjectRoot ".box\state.json"
++
++    if (-not (Test-Path $statePath)) {
++        Write-Host ""
++        Write-Host "No package state file found (.box/state.json)" -ForegroundColor Yellow
++        Write-Host "Run 'box install' to initialize package state" -ForegroundColor Gray
++        Write-Host ""
++        return
++    }
++
++    try {
++        $state = Get-Content $statePath -Raw | ConvertFrom-Json
++
++        Write-Host ""
++        Write-Host "Package State (.box/state.json):" -ForegroundColor Cyan
++        Write-Host ""
++
++        if (-not $state.packages -or $state.packages.PSObject.Properties.Count -eq 0) {
++            Write-Host "  No packages installed" -ForegroundColor Gray
++            Write-Host ""
++            return
++        }
++
++        foreach ($pkgName in $state.packages.PSObject.Properties.Name) {
++            $pkg = $state.packages.$pkgName
++
++            Write-Host "  $pkgName" -ForegroundColor White
++            Write-Host "    Installed: $($pkg.installed)" -ForegroundColor $(if ($pkg.installed) { "Green" } else { "Yellow" })
++
++            if ($pkg.files -and $pkg.files.Count -gt 0) {
++                Write-Host "    Files: $($pkg.files.Count) file(s)" -ForegroundColor Gray
++            }
++
++            if ($pkg.dirs -and $pkg.dirs.Count -gt 0) {
++                Write-Host "    Directories: $($pkg.dirs.Count) dir(s)" -ForegroundColor Gray
++            }
++
++            if ($pkg.envs -and $pkg.envs.PSObject.Properties.Count -gt 0) {
++                Write-Host "    Environment Variables:" -ForegroundColor Gray
++                foreach ($envName in $pkg.envs.PSObject.Properties.Name) {
++                    $envValue = $pkg.envs.$envName
++                    Write-Host "      $envName = $envValue" -ForegroundColor DarkGray
++                }
++            }
++
++            Write-Host ""
++        }
++    }
++    catch {
++        Write-Error "Failed to read package state: $_"
++    }
++}
