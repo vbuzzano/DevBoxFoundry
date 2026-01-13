@@ -668,10 +668,11 @@ if (Test-Path `$boxingInit) {
         }
 
         # Determine if we need to load functions in current session
+        # Always load on first install, or if profile wasn't configured, or if functions are missing
         $ProfileNeedsConfig = -not ($ProfileContent -match '#region boxing')
-        $FunctionsNeedLoading = $ProfileNeedsConfig -or -not (Get-Command -Name boxer -ErrorAction SilentlyContinue)
+        $FunctionsNeedLoading = (-not $BoxerAlreadyInstalled) -or $ProfileNeedsConfig -or -not (Get-Command -Name boxer -ErrorAction SilentlyContinue)
 
-        # Load functions in current session only if needed (profile not configured or function missing)
+        # Load functions in current session only if needed
         if ($FunctionsNeedLoading) {
             $global:function:boxer = {
                 $boxerPath = "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
