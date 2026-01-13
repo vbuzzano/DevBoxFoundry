@@ -814,7 +814,12 @@ function Install-CurrentBox {
             return
         }
 
-        # Create box directory
+        # Remove existing box directory if updating (clean install)
+        if (Test-Path $BoxDir) {
+            Remove-Item -Path $BoxDir -Recurse -Force
+        }
+
+        # Create fresh box directory
         New-Item -ItemType Directory -Path $BoxDir -Force | Out-Null
 
         # Download box.ps1
@@ -860,12 +865,6 @@ function Install-CurrentBox {
         # Download tpl/ directory (FILES ONLY, no subdirectories)
         Write-Step "Downloading templates..."
         $TplDir = Join-Path $BoxDir "tpl"
-
-        # Clean tpl directory if updating (remove old files)
-        if (Test-Path $TplDir) {
-            Remove-Item -Path $TplDir -Recurse -Force
-        }
-
         New-Item -ItemType Directory -Path $TplDir -Force | Out-Null
 
         # Use GitHub API to list tpl/ contents
