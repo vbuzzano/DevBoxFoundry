@@ -1,6 +1,0 @@
-# Sample LHA Archive Placeholder
-
-This file represents where a real .lha archive would be placed for testing.
-Real archives should be created with lha.exe during integration testing.
-
-Expected: tests/fixtures/archives/sample.lha

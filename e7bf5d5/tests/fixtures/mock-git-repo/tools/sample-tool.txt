@@ -1,1 +1,0 @@
-Sample tool file for testing FilterPaths

@@ -1,6 +1,0 @@
-# Sample 7z Archive Placeholder
-
-This file represents where a real .7z archive would be placed for testing.
-Real archives should be created with actual compression tools during integration testing.
-
-Expected: tests/fixtures/archives/sample.7z
