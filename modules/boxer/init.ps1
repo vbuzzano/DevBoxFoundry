@@ -643,7 +643,6 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
 
         # Check if profile already configured BEFORE modifying anything
         $ProfileIsReady = $ProfileContent -match '#region boxing'
-        Write-Host "DEBUG: ProfileIsReady = $ProfileIsReady" -ForegroundColor Magenta
 
         # Install box if this is a box repository (not Boxing main repo)
         if ($SourceRepo) {
@@ -651,15 +650,11 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
         }
 
         # Determine if we need to load functions in current session
-        $BoxerExists = Get-Command -Name boxer -ErrorAction SilentlyContinue
-        Write-Host "DEBUG: BoxerExists = $($null -ne $BoxerExists)" -ForegroundColor Magenta
-        $FunctionsNeedLoading = (-not $ProfileIsReady) -or -not $BoxerExists
-        Write-Host "DEBUG: FunctionsNeedLoading = $FunctionsNeedLoading" -ForegroundColor Magenta
+        $FunctionsNeedLoading = (-not $ProfileIsReady) -or -not (Get-Command -Name boxer -ErrorAction SilentlyContinue)
 
         # Load functions in current session only if needed
         if ($FunctionsNeedLoading) {
-            Write-Host "DEBUG: ENTERING IF BLOCK - LOADING FUNCTIONS" -ForegroundColor Yellow
-            $global:function:boxer = {
+            Set-Item -Path function:global:boxer -Value {
                 $boxerPath = "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
                 if (Test-Path $boxerPath) {
                     & $boxerPath @args
@@ -668,7 +663,7 @@ Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
                 }
             }
 
-            $global:function:box = {
+            Set-Item -Path function:global:box -Value {
                 $boxScript = $null
                 $current = (Get-Location).Path
 
