@@ -1,130 +1,18 @@
 # ============================================================================
-# Boxer Install Command Dispatcher
+# Boxer Install Module
 # ============================================================================
-
-function Invoke-Boxer-Install {
-    <#
-    .SYNOPSIS
-    Boxer install command dispatcher.
-
-    .PARAMETER Arguments
-    Command arguments (box name or GitHub URL).
-
-    .EXAMPLE
-    boxer install AmiDevBox
-    boxer install https://github.com/vbuzzano/AmiDevBox
-    #>
-    param(
-        [Parameter(ValueFromRemainingArguments=$true)]
-        [string[]]$Arguments
-    )
-
-    if (-not $Arguments -or $Arguments.Count -eq 0) {
-        Write-Host ""
-        Write-Host "Usage: boxer install <box-name|github-url>" -ForegroundColor Cyan
-        Write-Host ""
-        Write-Host "Install from registry:" -ForegroundColor Yellow
-        Write-Host "  boxer install AmiDevBox" -ForegroundColor DarkGray
-        Write-Host ""
-        Write-Host "Install from GitHub URL:" -ForegroundColor Yellow
-        Write-Host "  boxer install https://github.com/user/BoxName" -ForegroundColor DarkGray
-        Write-Host ""
-        Write-Host "Available boxes:" -ForegroundColor Cyan
-        foreach ($boxName in $script:BoxRegistry.Keys | Sort-Object) {
-            $url = $script:BoxRegistry[$boxName]
-            Write-Host "  - $boxName" -ForegroundColor White -NoNewline
-            Write-Host " ($url)" -ForegroundColor DarkGray
-        }
-        Write-Host ""
-        return
-    }
-
-    # Get box name or URL from first argument
-    $boxNameOrUrl = $Arguments[0]
-
-    # Call Install-Box
-    Install-Box -BoxUrl $boxNameOrUrl
-}
-
-# ============================================================================
-# Box Registry - Maps simple names to GitHub repository URLs
-# ============================================================================
-
-$script:BoxRegistry = @{
-    'AmiDevBox' = 'https://github.com/vbuzzano/AmiDevBox'
-    # 'BoxBuilder' = 'https://github.com/vbuzzano/BoxBuilder'  # Commented out until box exists
-}
-
-# ============================================================================
-# Box URL Resolution
-# ============================================================================
-
-function Get-BoxUrl {
-    <#
-    .SYNOPSIS
-    Resolves a box name or URL to a full GitHub repository URL.
-
-    .PARAMETER NameOrUrl
-    Either a simple box name (e.g., "AmiDevBox") or a full GitHub URL.
-
-    .RETURNS
-    Full GitHub repository URL.
-
-    .EXAMPLE
-    Get-BoxUrl "AmiDevBox"
-    Returns: https://github.com/vbuzzano/AmiDevBox
-
-    .EXAMPLE
-    Get-BoxUrl "https://github.com/user/CustomBox"
-    Returns: https://github.com/user/CustomBox (passthrough)
-    #>
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$NameOrUrl
-    )
-
-    # If already a URL, return as-is (passthrough)
-    if ($NameOrUrl -match '^https?://') {
-        return $NameOrUrl
-    }
-
-    # Try to resolve from registry
-    if ($script:BoxRegistry.ContainsKey($NameOrUrl)) {
-        return $script:BoxRegistry[$NameOrUrl]
-    }
-
-    # Not found in registry
-    Write-Host ""
-    Write-Host "Box '$NameOrUrl' not found in registry." -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Available boxes:" -ForegroundColor Cyan
-    foreach ($boxName in $script:BoxRegistry.Keys | Sort-Object) {
-        $url = $script:BoxRegistry[$boxName]
-        Write-Host "  - $boxName" -ForegroundColor White -NoNewline
-        Write-Host " ($url)" -ForegroundColor DarkGray
-    }
-    Write-Host ""
-    Write-Host "You can also install from any GitHub URL:" -ForegroundColor Cyan
-    Write-Host "  boxer install https://github.com/user/BoxName" -ForegroundColor DarkGray
-    Write-Host ""
-
-    throw "Box '$NameOrUrl' not found"
-}
-
-# ============================================================================
-# Box Installation
-# ============================================================================
+#
+# Handles boxer install command - installing boxes from GitHub URLs
 
 function Install-Box {
     <#
     .SYNOPSIS
-    Installs a box from GitHub URL or simple name.
+    Installs a box from a GitHub URL.
 
     .PARAMETER BoxUrl
-    GitHub repository URL or simple box name (e.g., "AmiDevBox").
+    GitHub repository URL (e.g., https://github.com/user/BoxName)
 
     .EXAMPLE
-    boxer install AmiDevBox
     boxer install https://github.com/vbuzzano/AmiDevBox
     #>
     param(
@@ -132,20 +20,11 @@ function Install-Box {
         [string]$BoxUrl
     )
 
-    # Resolve name to URL if needed
-    try {
-        $resolvedUrl = Get-BoxUrl -NameOrUrl $BoxUrl
-    }
-    catch {
-        Write-Error $_.Exception.Message
-        return
-    }
-
-    Write-Step "Installing box from $resolvedUrl..."
+    Write-Step "Installing box from $BoxUrl..."
 
     try {
         # Parse GitHub URL to extract owner, repo, branch
-        if ($resolvedUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$') {
+        if ($BoxUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$') {
             $Owner = $Matches['owner']
             $Repo = $Matches['repo']
             $BoxName = $Repo
@@ -312,4 +191,3 @@ function Get-RemoteBoxVersion {
 
     return $null
 }
-

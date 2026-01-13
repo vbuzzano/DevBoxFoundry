@@ -1,0 +1,10 @@
+{
+  "description": "Mock SourceForge redirect response for testing",
+  "originalUrl": "https://sourceforge.net/projects/lha/files/latest/download",
+  "redirectChain": [
+    "https://sourceforge.net/projects/lha/files/lha-1.14i/download",
+    "https://downloads.sourceforge.net/project/lha/lha-1.14i.zip"
+  ],
+  "finalUrl": "https://downloads.sourceforge.net/project/lha/lha-1.14i.zip",
+  "expectedBehavior": "Invoke-WebRequest should follow -MaximumRedirection 5"
+}

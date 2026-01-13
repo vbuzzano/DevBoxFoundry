@@ -1,0 +1,22 @@
+# Force LF line endings for all text files
+* text=auto eol=lf
+
+# PowerShell files
+*.ps1 text eol=lf
+*.psd1 text eol=lf
+*.psm1 text eol=lf
+
+# Markdown and documentation
+*.md text eol=lf
+
+# Configuration files
+*.config text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Binary files
+*.exe binary
+*.dll binary
+*.zip binary
+*.7z binary
+*.lha binary
