@@ -667,40 +667,46 @@ if (Test-Path `$boxingInit) {
             Install-CurrentBox -BoxName $SourceRepo -BoxingDir $BoxingDir
         }
 
-        # Always load functions in current session (required for irm|iex installation)
-        $global:function:boxer = {
-            $boxerPath = "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
-            if (Test-Path $boxerPath) {
-                & $boxerPath @args
-            } else {
-                Write-Host "Error: boxer.ps1 not found at $boxerPath" -ForegroundColor Red
-            }
-        }
+        # Determine if we need to load functions in current session
+        $ProfileNeedsConfig = -not ($ProfileContent -match '#region boxing')
+        $FunctionsNeedLoading = $ProfileNeedsConfig -or -not (Get-Command -Name boxer -ErrorAction SilentlyContinue)
 
-        $global:function:box = {
-            $boxScript = $null
-            $current = (Get-Location).Path
-
-            while ($current -ne [System.IO.Path]::GetPathRoot($current)) {
-                $testPath = Join-Path $current ".box\box.ps1"
-                if (Test-Path $testPath) {
-                    $boxScript = $testPath
-                    break
+        # Load functions in current session only if needed (profile not configured or function missing)
+        if ($FunctionsNeedLoading) {
+            $global:function:boxer = {
+                $boxerPath = "$env:USERPROFILE\Documents\PowerShell\Boxing\boxer.ps1"
+                if (Test-Path $boxerPath) {
+                    & $boxerPath @args
+                } else {
+                    Write-Host "Error: boxer.ps1 not found at $boxerPath" -ForegroundColor Red
                 }
-                $parent = Split-Path $current -Parent
-                if (-not $parent) { break }
-                $current = $parent
             }
 
-            if (-not $boxScript) {
-                Write-Host "❌ No box project found" -ForegroundColor Red
-                Write-Host ""
-                Write-Host "Create a new project:" -ForegroundColor Cyan
-                Write-Host "  boxer init MyProject" -ForegroundColor White
-                return
-            }
+            $global:function:box = {
+                $boxScript = $null
+                $current = (Get-Location).Path
 
-            & $boxScript @args
+                while ($current -ne [System.IO.Path]::GetPathRoot($current)) {
+                    $testPath = Join-Path $current ".box\box.ps1"
+                    if (Test-Path $testPath) {
+                        $boxScript = $testPath
+                        break
+                    }
+                    $parent = Split-Path $current -Parent
+                    if (-not $parent) { break }
+                    $current = $parent
+                }
+
+                if (-not $boxScript) {
+                    Write-Host "❌ No box project found" -ForegroundColor Red
+                    Write-Host ""
+                    Write-Host "Create a new project:" -ForegroundColor Cyan
+                    Write-Host "  boxer init MyProject" -ForegroundColor White
+                    return
+                }
+
+                & $boxScript @args
+            }
         }
 
         # Display appropriate completion message
