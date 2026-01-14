@@ -121,6 +121,9 @@ function Import-ModeModules {
                     Source = 'core'
                 }
             }
+            else {
+                Write-Verbose "Override applied for ${commandName}: skipping core module $($file.FullName)"
+            }
         }
     }
 
@@ -189,35 +192,42 @@ function Import-SharedModules {
         return
     }
 
-    # Load complex modules with metadata
-    $metadataFiles = Get-ChildItem -Path $sharedPath -Filter 'metadata.psd1' -Recurse
+    $moduleDirs = Get-ChildItem -Path $sharedPath -Directory -Recurse
 
-    foreach ($metaFile in $metadataFiles) {
-        try {
-            $metadata = Import-PowerShellDataFile -Path $metaFile.FullName
-            $moduleName = $metadata.ModuleName
-            $moduleDir = $metaFile.Directory.FullName
-
-            # Load all .ps1 files in the module directory
-            $moduleFiles = Get-ChildItem -Path $moduleDir -Filter '*.ps1'
-
-            foreach ($file in $moduleFiles) {
-                . $file.FullName
-                Write-Verbose "Loaded shared module: $moduleName/$($file.Name)"
-            }
-
-            # Register module commands
-            if ($metadata.Commands) {
-                foreach ($cmd in $metadata.Commands) {
-                    $script:Commands[$cmd] = $moduleName
-                }
-            }
-
-            $script:LoadedModules[$moduleName] = $moduleDir
+    foreach ($moduleDir in $moduleDirs) {
+        $metadataPath = Join-Path $moduleDir.FullName 'metadata.psd1'
+        if (-not (Test-Path $metadataPath)) {
+            throw "Shared module missing metadata.psd1: $($moduleDir.FullName)"
         }
-        catch {
-            Write-Warning "Failed to load shared module $($metaFile.Directory.Name): $_"
+
+        $metadata = Import-PowerShellDataFile -Path $metadataPath
+
+        $missingKeys = @()
+        if (-not $metadata.ContainsKey('ModuleName') -or [string]::IsNullOrWhiteSpace($metadata.ModuleName)) {
+            $missingKeys += 'ModuleName'
         }
+        if (-not $metadata.ContainsKey('Commands') -or -not $metadata.Commands -or $metadata.Commands.Count -eq 0) {
+            $missingKeys += 'Commands'
+        }
+
+        if ($missingKeys.Count -gt 0) {
+            throw "Shared module $($moduleDir.FullName) missing required metadata keys: $($missingKeys -join ', ')"
+        }
+
+        $moduleName = $metadata.ModuleName
+
+        $moduleFiles = Get-ChildItem -Path $moduleDir.FullName -Filter '*.ps1'
+
+        foreach ($file in $moduleFiles) {
+            . $file.FullName
+            Write-Verbose "Loaded shared module: $moduleName/$($file.Name)"
+        }
+
+        foreach ($cmd in $metadata.Commands) {
+            $script:Commands[$cmd] = $moduleName
+        }
+
+        $script:LoadedModules[$moduleName] = $moduleDir.FullName
     }
 }
 
