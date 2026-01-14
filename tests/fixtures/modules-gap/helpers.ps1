@@ -38,15 +38,25 @@ function New-MgSharedModule {
         [string]$Mode = 'Box',
         [switch]$SkipMetadata,
         [string[]]$MissingKeys = @(),
-        [string[]]$PrivateFunctions = @()
+        [string[]]$PrivateFunctions = @(),
+        [switch]$SkipFunctions,
+        [string[]]$ExtraFunctions = @()
     )
 
     $moduleDir = Join-Path $Root "modules/shared/$ModuleName"
     New-Item -ItemType Directory -Path $moduleDir -Force | Out-Null
 
-    foreach ($cmd in $Commands) {
-        $functionName = "Invoke-$Mode-$cmd"
-        $filePath = Join-Path $moduleDir "$cmd.ps1"
+    if (-not $SkipFunctions) {
+        foreach ($cmd in $Commands) {
+            $functionName = "Invoke-$Mode-$cmd"
+            $filePath = Join-Path $moduleDir "$cmd.ps1"
+            Set-Content -Path $filePath -Value "function $functionName { param([string[]]`$Args) return '$functionName' }" -Encoding UTF8
+        }
+    }
+
+    foreach ($extra in $ExtraFunctions) {
+        $functionName = "Invoke-$Mode-$extra"
+        $filePath = Join-Path $moduleDir "$extra.ps1"
         Set-Content -Path $filePath -Value "function $functionName { param([string[]]`$Args) return '$functionName' }" -Encoding UTF8
     }
 
