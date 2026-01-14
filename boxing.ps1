@@ -279,6 +279,10 @@ function Invoke-Command {
     )
 
     if (-not $script:Commands.ContainsKey($CommandName)) {
+        if ($CommandName -eq 'help') {
+            Show-Help
+            return 0
+        }
         Write-Error "Unknown command: $CommandName"
         Show-Help
         return 1
