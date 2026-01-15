@@ -31,12 +31,28 @@ if (-not (Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 }
 
-# Read boxer version to embed in box.ps1
-$BoxerVersion = "1.0.0"
-if (Test-Path "dist\boxer.ps1") {
-    $boxerContent = Get-Content "dist\boxer.ps1" -Raw -ErrorAction SilentlyContinue
-    if ($boxerContent -match 'Version:\s*(\d+\.\d+\.\d+)') {
-        $BoxerVersion = $Matches[1]
+# Read box version from AmiDevBox metadata (fallback to boxer build)
+$BoxVersion = $null
+$amiMetadataPath = Join-Path $RepoRoot "boxers\AmiDevBox\metadata.psd1"
+if (Test-Path $amiMetadataPath) {
+    try {
+        $amiMetadata = Import-PowerShellDataFile $amiMetadataPath
+        if ($amiMetadata.Version) {
+            $BoxVersion = $amiMetadata.Version
+        }
+    } catch {
+        Write-Host "[WARN] Failed to read AmiDevBox metadata version: $_" -ForegroundColor Yellow
+    }
+}
+
+# Fallback: derive from boxer.ps1 if metadata unavailable
+if (-not $BoxVersion) {
+    $BoxVersion = "1.0.0"
+    if (Test-Path "dist\boxer.ps1") {
+        $boxerContent = Get-Content "dist\boxer.ps1" -Raw -ErrorAction SilentlyContinue
+        if ($boxerContent -match 'Version:\s*(\d+\.\d+\.\d+)') {
+            $BoxVersion = $Matches[1]
+        }
     }
 }
 
@@ -54,7 +70,7 @@ $content += @"
 
 .NOTES
     Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-    Version: $BoxerVersion
+    Version: $BoxVersion
 #>
 
 param(
@@ -72,7 +88,7 @@ param(
 # ============================================================================
 
 # Embedded version information (injected by build script)
-`$script:BoxerVersion = "$BoxerVersion"
+`$script:BoxerVersion = "$BoxVersion"
 
 `$BaseDir = Get-Location
 `$BoxDir = `$null
