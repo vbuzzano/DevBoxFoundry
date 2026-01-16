@@ -338,14 +338,48 @@ function Register-MetadataModule {
         if ($script:CommandRegistry.ContainsKey($cmdName)) { continue }
 
         $config = $entry.Value
-        $handler = if ($config.ContainsKey('Handler')) { Resolve-MetadataHandler -ModulePath $ModulePath -Value $config['Handler'] } else { $null }
-        $dispatcher = if ($config.ContainsKey('Dispatcher')) { Resolve-MetadataHandler -ModulePath $ModulePath -Value $config['Dispatcher'] } else { $null }
-        $subcommands = @{}
+        $hasHandler = ($config.ContainsKey('Handler') -and -not [string]::IsNullOrWhiteSpace($config['Handler']))
+        $hasDispatcher = ($config.ContainsKey('Dispatcher') -and -not [string]::IsNullOrWhiteSpace($config['Dispatcher']))
+        $hasSubcommands = ($config.ContainsKey('Subcommands') -and $config['Subcommands'])
 
-        if ($config.ContainsKey('Subcommands') -and $config['Subcommands']) {
+        if ($hasHandler -and $hasDispatcher) {
+            Write-Warning "Metadata command $cmdName cannot define both Handler and Dispatcher. Skipping."
+            continue
+        }
+
+        if (-not $hasHandler -and -not $hasDispatcher -and -not $hasSubcommands) {
+            Write-Warning "Metadata command $cmdName must define Handler, Dispatcher, or Subcommands. Skipping."
+            continue
+        }
+
+        $handler = $null
+        $dispatcher = $null
+
+        if ($hasHandler) {
+            $handler = Resolve-MetadataHandler -ModulePath $ModulePath -Value $config['Handler']
+            if (-not $handler) {
+                Write-Warning "Metadata command $cmdName has invalid Handler. Skipping."
+                continue
+            }
+        }
+
+        if ($hasDispatcher) {
+            $dispatcher = Resolve-MetadataHandler -ModulePath $ModulePath -Value $config['Dispatcher']
+            if (-not $dispatcher) {
+                Write-Warning "Metadata command $cmdName has invalid Dispatcher. Skipping."
+                continue
+            }
+        }
+
+        $subcommands = @{}
+        if ($hasSubcommands) {
             foreach ($subEntry in $config['Subcommands'].GetEnumerator()) {
                 $subValue = $subEntry.Value
                 $subHandler = if ($subValue.ContainsKey('Handler')) { Resolve-MetadataHandler -ModulePath $ModulePath -Value $subValue['Handler'] } else { $null }
+                if (-not $subHandler) {
+                    Write-Warning "Metadata subcommand $($subEntry.Key.ToLower()) for $cmdName missing valid Handler. Skipping subcommand."
+                    continue
+                }
                 $subcommands[$subEntry.Key.ToLower()] = @{
                     Name = $subEntry.Key.ToLower()
                     Handler = $subHandler
