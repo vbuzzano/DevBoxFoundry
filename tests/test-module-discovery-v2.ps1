@@ -174,6 +174,36 @@ function Invoke-Box-Hello {
         }
     }
 
+    Context "Mixed priority" {
+        It "prefers external when present and keeps embedded when no override" {
+            $script:Mode = 'box'
+
+            # Embedded command without external override
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'pkg.ps1') -Encoding UTF8 -Value @'
+function Invoke-Box-Pkg {
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$InputArgs
+    )
+    'embedded-pkg:' + ($InputArgs -join ',')
+}
+'@
+
+            # External override for hello
+            $customDir = Join-Path $testRoot '.box/modules'
+            New-Item -ItemType Directory -Path $customDir -Force | Out-Null
+            $fixture = Join-Path $PSScriptRoot 'fixtures/external-single/hello.ps1'
+            Copy-Item -Path $fixture -Destination (Join-Path $customDir 'hello.ps1') -Force
+
+            Import-ModeModules -Mode 'box'
+
+            Invoke-Command -CommandName 'hello' -Arguments @('x') | Should Be 'hello:x'
+            Invoke-Command -CommandName 'pkg' -Arguments @('y') | Should Be 'embedded-pkg:y'
+        }
+    }
+
     Context "Argument passthrough" {
         BeforeEach {
             $script:Mode = 'box'
