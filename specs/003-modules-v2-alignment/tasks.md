@@ -44,11 +44,11 @@
 **Independent Test**: Pester scenario "embedded fallback" passes when no external override.
 
 ### Tests
-- [ ] T006 [P] [US1] Add Pester test ensuring `Invoke-Boxer-Install` routes when no external override (`tests/test-module-discovery-v2.ps1`)
-- [ ] T007 [P] [US1] Add Pester test ensuring `Invoke-Box-Pkg` default/help still reachable without external overrides
+- [X] T006 [P] [US1] Add Pester test ensuring `Invoke-Boxer-Install` routes when no external override (`tests/test-module-discovery-v2.ps1`)
+- [X] T007 [P] [US1] Add Pester test ensuring `Invoke-Box-Pkg` default/help still reachable without external overrides
 
 ### Implementation
-- [ ] T008 [US1] Preserve embedded registration in `boxing.ps1` `Register-EmbeddedCommands` after routing changes
+- [X] T008 [US1] Preserve embedded registration in `boxing.ps1` `Register-EmbeddedCommands` after routing changes
 
 **Checkpoint**: Embedded commands operate unchanged.
 
