@@ -117,13 +117,13 @@
 **Independent Test**: Mixed scenarios (external override, embedded fallback, metadata dispatcher) all pass.
 
 ### Tests
-- [ ] T022 [P] [US5] Pester test verifying mixed priority: external overrides embedded; embedded used when no external
+- [X] T022 [P] [US5] Pester test verifying mixed priority: external overrides embedded; embedded used when no external
 - [X] T023 [P] [US5] Pester test ensuring `help` output lists sources and handles default-command/help cases for directory modules
 - [X] T035 [P] [US5] Pester test covering help listing when a directory module lacks default command, ensuring subcommands are shown (FR-021)
 
 ### Implementation
-- [ ] T024 [US5] Refactor `boxing.ps1` dispatcher to unify resolution: build command map with priority (external > embedded), support help indicators, forward args unchanged
-- [ ] T025 [US5] Ensure dispatcher path passes `-CommandPath` to custom dispatchers and supports default command fallback when no subcommand
+- [X] T024 [US5] Refactor `boxing.ps1` dispatcher to unify resolution: build command map with priority (external > embedded), support help indicators, forward args unchanged
+- [X] T025 [US5] Ensure dispatcher path passes `-CommandPath` to custom dispatchers and supports default command fallback when no subcommand
 - [X] T036 [US5] Implement help path to list subcommands when no default exists for directory modules (aligned with FR-021)
 - [X] T037 [US5] Harden mode detection to select boxer/box module roots before discovery and expose mode flag for downstream routing (FR-001)
 
