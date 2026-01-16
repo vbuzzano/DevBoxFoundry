@@ -131,6 +131,49 @@ Embedded pkg command
         }
     }
 
+    Context "External modules" {
+        BeforeEach {
+            $script:Mode = 'box'
+            New-Item -ItemType Directory -Path (Join-Path $testRoot '.box/modules') -Force | Out-Null
+        }
+
+        It "executes external single-file modules directly" {
+            $fixture = Join-Path $PSScriptRoot 'fixtures/external-single/hello.ps1'
+            Copy-Item -Path $fixture -Destination (Join-Path $testRoot '.box/modules/hello.ps1') -Force
+
+            Import-ModeModules -Mode 'box'
+
+            Invoke-Command -CommandName 'hello' -Arguments @('one', 'two') | Should Be 'hello:one|two'
+        }
+
+        It "executes directory module default and subcommand" {
+            $fixtureDir = Join-Path $PSScriptRoot 'fixtures/external-dir/foo'
+            Copy-Item -Path $fixtureDir -Destination (Join-Path $testRoot '.box/modules') -Recurse -Force
+
+            Import-ModeModules -Mode 'box'
+
+            Invoke-Command -CommandName 'foo' -Arguments @('a', 'b') | Should Be 'foo-default:a|b'
+            Invoke-Command -CommandName 'foo' -Arguments @('bar', 'x') | Should Be 'foo-bar:x'
+        }
+
+        It "prefers external modules over embedded when names collide" {
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'hello.ps1') -Encoding UTF8 -Value @'
+function Invoke-Box-Hello {
+    'embedded'
+}
+'@
+
+            $fixture = Join-Path $PSScriptRoot 'fixtures/external-single/hello.ps1'
+            Copy-Item -Path $fixture -Destination (Join-Path $testRoot '.box/modules/hello.ps1') -Force
+
+            Import-ModeModules -Mode 'box'
+
+            Invoke-Command -CommandName 'hello' -Arguments @() | Should Be 'hello:'
+        }
+    }
+
     Context "Argument passthrough" {
         BeforeEach {
             $script:Mode = 'box'
