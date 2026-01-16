@@ -20,8 +20,8 @@
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Create external single-file fixture `tests/fixtures/external-single/hello.ps1` for routing tests
-- [ ] T002 [P] Create directory-module fixture `tests/fixtures/external-dir/foo/{foo.ps1,bar.ps1}` for default/subcommand tests
+ - [X] T001 Create external single-file fixture `tests/fixtures/external-single/hello.ps1` for routing tests
+ - [X] T002 [P] Create directory-module fixture `tests/fixtures/external-dir/foo/{foo.ps1,bar.ps1}` for default/subcommand tests
 
 ---
 
@@ -30,8 +30,8 @@
 **Purpose**: Common test harness and fixtures required by all user stories
 
 - [X] T003 Add Pester harness `tests/test-module-discovery-v2.ps1` covering external/embedded routing scenarios
-- [ ] T004 [P] Add fixture metadata module `tests/fixtures/metadata-sample/{metadata.psd1,handler.ps1,dispatcher.ps1,help.ps1}` for metadata and help handler tests
-- [ ] T005 Document fixture usage in `tests/fixtures/README.md` for module discovery tests
+ - [X] T004 [P] Add fixture metadata module `tests/fixtures/metadata-sample/{metadata.psd1,handler.ps1,dispatcher.ps1,help.ps1}` for metadata and help handler tests
+ - [X] T005 Document fixture usage in `tests/fixtures/README.md` for module discovery tests
 - [X] T029 [P] Add Pester test asserting mode detection (boxer vs box) occurs before discovery and selects correct module roots (FR-001)
 
 **Checkpoint**: Foundation ready - user story work can begin.
