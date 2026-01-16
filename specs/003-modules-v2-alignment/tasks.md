@@ -66,9 +66,9 @@
 - [X] T030 [P] [US2] Pester test verifying argument passthrough `@args` for embedded functions and external single-file/directory modules (FR-012)
 
 ### Implementation
-- [ ] T012 [US2] Update `boxing.ps1` `Import-ModeModules` to route external single-file modules via direct script execution
-- [ ] T013 [US2] Update `boxing.ps1` directory-module logic to execute `{module}/{subcommand}.ps1` and `{module}/{module}.ps1` as default
-- [ ] T033 [US2] Ensure routing path preserves argument splatting unchanged for all external module executions (FR-012)
+- [X] T012 [US2] Update `boxing.ps1` `Import-ModeModules` to route external single-file modules via direct script execution
+- [X] T013 [US2] Update `boxing.ps1` directory-module logic to execute `{module}/{subcommand}.ps1` and `{module}/{module}.ps1` as default
+- [X] T033 [US2] Ensure routing path preserves argument splatting unchanged for all external module executions (FR-012)
 
 **Checkpoint**: External modules run without function wrappers and override embedded ones.
 
