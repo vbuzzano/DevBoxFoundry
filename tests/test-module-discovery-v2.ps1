@@ -204,6 +204,38 @@ function Invoke-Box-Pkg {
         }
     }
 
+    Context "Metadata validation and dispatch" {
+        BeforeEach {
+            $script:Mode = 'box'
+            New-Item -ItemType Directory -Path (Join-Path $testRoot '.box/modules') -Force | Out-Null
+        }
+
+        It "rejects metadata missing required keys or with both handler and dispatcher" {
+            $invalidDir = Join-Path $testRoot '.box/modules/invalid'
+            New-Item -ItemType Directory -Path $invalidDir -Force | Out-Null
+
+            Set-Content -Path (Join-Path $invalidDir 'metadata.psd1') -Encoding UTF8 -Value @'
+@{
+    Commands = @{ bad = @{ Handler = 'run.ps1'; Dispatcher = 'Invoke-Bad' } }
+}
+'@
+            Set-Content -Path (Join-Path $invalidDir 'run.ps1') -Encoding UTF8 -Value "'bad'"
+
+            Import-ModeModules -Mode 'box'
+
+            $script:CommandRegistry.ContainsKey('bad') | Should Be $false
+        }
+
+        It "passes CommandPath to metadata dispatcher" {
+            $metaFixture = Join-Path $PSScriptRoot 'fixtures/metadata-sample'
+            Copy-Item -Path $metaFixture -Destination (Join-Path $testRoot '.box/modules') -Recurse -Force
+
+            Import-ModeModules -Mode 'box'
+
+            Invoke-Command -CommandName 'route' -Arguments @('foo', 'bar') | Should Be 'dispatch:route>foo|bar'
+        }
+    }
+
     Context "Argument passthrough" {
         BeforeEach {
             $script:Mode = 'box'
