@@ -60,9 +60,9 @@
 **Independent Test**: External single-file and directory modules run directly via Pester fixtures.
 
 ### Tests
-- [ ] T009 [P] [US2] Pester test for external single-file command execution (`tests/test-module-discovery-v2.ps1`)
-- [ ] T010 [P] [US2] Pester test for directory module default (`foo/foo.ps1`) and subcommand (`foo/bar.ps1`)
-- [ ] T011 [P] [US2] Pester test confirming external override wins over embedded when names collide
+- [X] T009 [P] [US2] Pester test for external single-file command execution (`tests/test-module-discovery-v2.ps1`)
+- [X] T010 [P] [US2] Pester test for directory module default (`foo/foo.ps1`) and subcommand (`foo/bar.ps1`)
+- [X] T011 [P] [US2] Pester test confirming external override wins over embedded when names collide
 - [X] T030 [P] [US2] Pester test verifying argument passthrough `@args` for embedded functions and external single-file/directory modules (FR-012)
 
 ### Implementation
