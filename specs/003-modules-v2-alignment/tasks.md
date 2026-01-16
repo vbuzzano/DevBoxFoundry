@@ -80,14 +80,14 @@
 **Independent Test**: Metadata fixture routes via dispatcher and handler as declared.
 
 ### Tests
-- [ ] T014 [P] [US3] Pester test validating metadata-required keys and dispatcher/handler exclusivity
-- [ ] T015 [P] [US3] Pester test ensuring dispatcher receives `-CommandPath` and routes to handler from metadata fixture
+- [X] T014 [P] [US3] Pester test validating metadata-required keys and dispatcher/handler exclusivity
+- [X] T015 [P] [US3] Pester test ensuring dispatcher receives `-CommandPath` and routes to handler from metadata fixture
 - [X] T031 [P] [US3] Pester test ensuring metadata-defined `help.ps1` is invoked and can override default help output (FR-020)
 - [X] T032 [P] [US3] Pester test verifying argument passthrough to metadata handlers/dispatchers remains intact (FR-012)
 
 ### Implementation
-- [ ] T016 [US3] Enhance metadata validation in `boxing.ps1` shared-module loading to enforce schema rules (required keys, exclusivity, hooks optional)
-- [ ] T017 [US3] Adjust metadata execution path in `boxing.ps1` to honor dispatcher vs subcommand/handler selections
+- [X] T016 [US3] Enhance metadata validation in `boxing.ps1` shared-module loading to enforce schema rules (required keys, exclusivity, hooks optional)
+- [X] T017 [US3] Adjust metadata execution path in `boxing.ps1` to honor dispatcher vs subcommand/handler selections
 - [X] T034 [US3] Implement metadata help handler invocation when `help.ps1` exists and fallback when absent
 
 **Checkpoint**: Metadata modules load and route correctly with validation errors reported gracefully.
