@@ -82,6 +82,55 @@ param(
         }
     }
 
+    Context "Embedded fallback" {
+        It "routes boxer install when no external override" {
+            $script:Mode = 'boxer'
+
+            $embeddedDir = Join-Path $testRoot 'modules/boxer'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'install.ps1') -Encoding UTF8 -Value @'
+function Invoke-Boxer-Install {
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$InputArgs
+    )
+    'embedded-boxer:' + ($InputArgs -join ',')
+}
+'@
+
+            Import-ModeModules -Mode 'boxer'
+
+            Invoke-Command -CommandName 'install' -Arguments @('one', 'two') | Should Be 'embedded-boxer:one,two'
+        }
+
+        It "keeps box pkg default and help when no external override" {
+            $script:Mode = 'box'
+
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'pkg.ps1') -Encoding UTF8 -Value @'
+function Invoke-Box-Pkg {
+<#
+.SYNOPSIS
+Embedded pkg command
+#>
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$InputArgs
+    )
+    'embedded-pkg:' + ($InputArgs -join ',')
+}
+'@
+
+            Import-ModeModules -Mode 'box'
+
+            Invoke-Command -CommandName 'pkg' -Arguments @('a') | Should Be 'embedded-pkg:a'
+
+            $list = Show-Help
+            $list | Out-String | Should BeLike '*pkg*'
+        }
+    }
+
     Context "Argument passthrough" {
         BeforeEach {
             $script:Mode = 'box'
