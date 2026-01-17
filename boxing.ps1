@@ -80,6 +80,7 @@ function Import-CoreLibraries {
 }
 
 # Build list of external module roots by mode and priority
+# box-override: External modules in .box/modules/ and modules/ override embedded modules
 function Get-ExternalModuleRoots {
     param([string]$Mode)
 
@@ -87,6 +88,7 @@ function Get-ExternalModuleRoots {
 
     if ($Mode -eq 'box') {
         $projectRoot = Get-Location
+        # box-override priority: custom modules before project modules
         $roots += @{ Path = Join-Path $projectRoot '.box\modules'; Source = 'custom' }
         $roots += @{ Path = Join-Path $projectRoot 'modules'; Source = 'project' }
     }
@@ -449,7 +451,9 @@ function Import-ModeModules {
                     $script:Commands[$commandName] = $file.FullName
                 }
 
-                $script:LoadedModules[$file.Name] = $file.FullName
+                if (-not $script:LoadedModules.ContainsKey($file.Name)) {
+                    $script:LoadedModules[$file.Name] = $file.FullName
+                }
 
                 Write-Verbose "Loaded module (embedded): $Mode/$($file.Name)"
             }
@@ -477,12 +481,14 @@ function Register-EmbeddedCommands {
         $namePart = $funcName.Substring($prefix.Length)
         $commandName = ($namePart -split '-', 2)[0].ToLower()
 
-        if ($registered.ContainsKey($commandName) -or $script:CommandRegistry.ContainsKey($commandName)) {
+        if ($registered.ContainsKey($commandName)) {
             Write-Verbose "Skipping duplicate embedded command: $commandName from $funcName"
             continue
         }
 
-        $script:Commands[$commandName] = $funcName
+        if (-not $script:Commands.ContainsKey($commandName)) {
+            $script:Commands[$commandName] = $funcName
+        }
         $registered[$commandName] = $true
 
         if (-not $script:CommandRegistry.ContainsKey($commandName)) {
@@ -850,7 +856,8 @@ function Show-Help {
             }
 
             if ($helpHandler) {
-                & $helpHandler @()
+                    $helpOutput = & $helpHandler @()
+                    if ($helpOutput) { $helpOutput | ForEach-Object { Write-Output $_ } }
                 return
             }
 
@@ -888,8 +895,8 @@ function Show-Help {
 
             if ($helpHandler) {
                 $helpOutput = & $helpHandler @()
-                if ($helpOutput) { $helpOutput | ForEach-Object { Write-Host $_ } }
-                return $helpHandler
+                if ($helpOutput) { $helpOutput | ForEach-Object { Write-Verbose $_ } }
+                return $helpOutput
             }
 
             if ($handler) {
@@ -947,7 +954,8 @@ function Initialize-Boxing {
                 Install-BoxingSystem | Out-Null
                 return
             }
-        }        # Step 1: Detect mode
+        }
+        # Step 1: Detect mode
         $mode = Initialize-Mode
         Write-Verbose "Mode: $mode"
 
