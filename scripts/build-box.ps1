@@ -89,6 +89,8 @@ param(
 
 # Embedded version information (injected by build script)
 `$script:BoxerVersion = "$BoxVersion"
+`$script:IsEmbedded = `$true
+`$script:Mode = 'box'
 
 `$BaseDir = Get-Location
 `$BoxDir = `$null
@@ -190,10 +192,6 @@ $content += @"
 # ============================================================================
 # MAIN - Call Initialize-Boxing (Spec 010 architecture)
 # ============================================================================
-
-# Set embedded flag and mode before calling Initialize-Boxing
-`$script:IsEmbedded = `$true
-`$script:Mode = 'box'
 
 # Build arguments array (Command + remaining Arguments)
 `$allArgs = @()
