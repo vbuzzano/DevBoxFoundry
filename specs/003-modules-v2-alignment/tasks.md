@@ -100,12 +100,12 @@
 **Independent Test**: Build outputs contain `Invoke-{Mode}-{Command}` functions and embedded flags.
 
 ### Tests
-- [ ] T018 [P] [US4] Add Pester/smoke check to run `scripts/build-boxer.ps1` and assert function wrappers & `$script:IsEmbedded` present in `dist/boxer.ps1`
-- [ ] T019 [P] [US4] Add Pester/smoke check to run `scripts/build-box.ps1` and assert wrappers, shared pkg inclusion, and help preserved in `dist/box.ps1`
+- [X] T018 [P] [US4] Add Pester/smoke check to run `scripts/build-boxer.ps1` and assert function wrappers & `$script:IsEmbedded` present in `dist/boxer.ps1`
+- [X] T019 [P] [US4] Add Pester/smoke check to run `scripts/build-box.ps1` and assert wrappers, shared pkg inclusion, and help preserved in `dist/box.ps1`
 
 ### Implementation
-- [ ] T020 [US4] Align `scripts/build-boxer.ps1` wrapping logic with v2 (only modules/boxer, preserve comment help, version replacement)
-- [ ] T021 [P] [US4] Align `scripts/build-box.ps1` wrapping logic with v2 (modules/box + shared/pkg, preserve help, embedded flags)
+- [X] T020 [US4] Align `scripts/build-boxer.ps1` wrapping logic with v2 (only modules/boxer, preserve comment help, version replacement)
+- [X] T021 [P] [US4] Align `scripts/build-box.ps1` wrapping logic with v2 (modules/box + shared/pkg, preserve help, embedded flags)
 
 **Checkpoint**: Build artifacts match v2 expectations.
 
@@ -133,9 +133,9 @@
 
 ## Phase N: Polish & Cross-Cutting Concerns
 
-- [ ] T026 [P] Update `quickstart.md` with any new test commands if routing changes impacted usage
-- [ ] T027 Run full Pester suite `Invoke-Pester` from repo root and capture results in `tests/TEST-RESULTS-v2.txt`
-- [ ] T028 Code cleanup: remove redundant routing code/comments in `boxing.ps1` post-refactor
+- [X] T026 [P] Update `quickstart.md` with any new test commands if routing changes impacted usage
+- [X] T027 Run full Pester suite `Invoke-Pester` from repo root and capture results in `tests/TEST-RESULTS-v2.txt`
+- [X] T028 Code cleanup: remove redundant routing code/comments in `boxing.ps1` post-refactor
 
 ---
 
