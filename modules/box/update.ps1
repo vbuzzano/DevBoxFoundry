@@ -61,7 +61,7 @@ function Invoke-Box-Update {
 
         # Execute irm|iex (will trigger Update-LocalBoxIfNeeded in Initialize-Boxing)
         Invoke-RestMethod -Uri $url | Invoke-Expression
-        
+
         Write-Host ""
         Write-Host "⚠ Restart your PowerShell session to use the updated box" -ForegroundColor Yellow
 
