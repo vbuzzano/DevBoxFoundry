@@ -122,6 +122,30 @@ $sourceContent | Set-Content $sourceMetadataPath -Encoding UTF8
 Write-Host "   metadata.psd1 (box metadata)..." -ForegroundColor Gray
 Copy-Item -Force "$BoxPath\metadata.psd1" "$ReleaseDir\metadata.psd1"
 
+# Update release box.ps1 header and embedded version using AmiDevBox metadata
+$releaseMetadataPath = Join-Path $ReleaseDir "metadata.psd1"
+$releaseBoxPath = Join-Path $ReleaseDir "box.ps1"
+if ((Test-Path $releaseMetadataPath) -and (Test-Path $releaseBoxPath)) {
+    try {
+        $releaseMetadata = Import-PowerShellDataFile $releaseMetadataPath
+        $boxName = if ($releaseMetadata.BoxName) { $releaseMetadata.BoxName } else { "AmiDevBox" }
+        $boxVersion = if ($releaseMetadata.Version) { $releaseMetadata.Version } else { $BoxerVersion }
+        $boxBuildDate = if ($releaseMetadata.BuildDate) { $releaseMetadata.BuildDate } else { (Get-Date -Format 'yyyy-MM-dd') }
+
+        $boxContent = Get-Content $releaseBoxPath -Raw
+        $boxContent = $boxContent -replace '(?m)^\.SYNOPSIS\s*\n\s*.*$', ".SYNOPSIS`n    $boxName - $ReleaseDescription"
+        $boxContent = $boxContent -replace '(?m)^\s*Build Date:.*$', "    Build Date: $boxBuildDate"
+        $boxContent = $boxContent -replace '(?m)^\s*Version:.*$', "    Version: $boxVersion"
+        $boxContent = $boxContent -replace '(?m)^\$script:BoxerVersion\s*=\s*\"[^\"]*\"', "`$script:BoxerVersion = `"$boxVersion`""
+
+        Set-Content -Path $releaseBoxPath -Value $boxContent -Encoding UTF8
+        Write-Host "   Updated box.ps1 header for $boxName v$boxVersion" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "   [WARN] Could not update box.ps1 header: $_" -ForegroundColor Yellow
+    }
+}
+
 Write-Host "   tpl/ (template directory)..." -ForegroundColor Gray
 if (Test-Path "$BoxPath\tpl") {
     $TplSource = Join-Path $BoxPath "tpl"

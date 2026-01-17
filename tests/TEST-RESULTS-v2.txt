@@ -1,0 +1,116 @@
+
+Starting discovery in 5 files.
+Discovery found 44 tests in 83ms.
+Running tests.
+Metadata module C:\Users\reddoc\AppData\Local\Temp\0047f10f-c995-4afe-a1f6-4fd96aa29be8\74c53ad9-15a5-43b9-a5d7-65efe88aee58\.box\modules\invalid missing required keys: ModuleName
+[+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-module-discovery-v2.ps1
+ 1.36s (1.22s|92ms)
+[+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-module-loader.ps1
+ 449ms (408ms|30ms)
+Version: 0.1.119 → 0.1.120
+
+🔨 Building boxer.ps1
+============================================================
+
+✓ Embedded: boxing.ps1 (functions)
+✓ Embedded: core/ui.ps1
+✓ Embedded: core/version.ps1
+✓ Embedded: modules/boxer/init.ps1
+✓ Embedded: modules/boxer/install.ps1
+✓ Embedded: modules/boxer/list.ps1
+✓ Embedded: modules/boxer/version.ps1
+
+✓ Build complete: C:\Users\reddoc\AppData\Local\Temp\5438dda3-6c72-4849-bda4-3583843fc517\d92772e5-feec-4e8e-99d3-6230474550a2\dist\boxer.ps1
+  Size: 89.24 KB
+
+
+🔨 Building box.ps1
+============================================================
+
+✓ Embedded: boxing.ps1 (functions)
+✓ Embedded: core/commands.ps1
+✓ Embedded: core/common.ps1
+✓ Embedded: core/config.ps1
+✓ Embedded: core/constants.ps1
+✓ Embedded: core/directories.ps1
+✓ Embedded: core/download.ps1
+✓ Embedded: core/envs.ps1
+✓ Embedded: core/extract.ps1
+✓ Embedded: core/help.ps1
+✓ Embedded: core/makefile.ps1
+✓ Embedded: core/sevenzip.ps1
+✓ Embedded: core/templates.ps1
+✓ Embedded: core/ui.ps1
+✓ Embedded: core/version.ps1
+✓ Embedded: core/wizard.ps1
+✓ Embedded: modules/box/clean.ps1
+✓ Embedded: modules/box/env.ps1
+✓ Embedded: modules/box/env\list.ps1
+✓ Embedded: modules/box/env\load.ps1
+✓ Embedded: modules/box/env\replace.ps1
+✓ Embedded: modules/box/env\update.ps1
+✓ Embedded: modules/box/info.ps1
+✓ Embedded: modules/box/install.ps1
+✓ Embedded: modules/box/load.ps1
+✓ Embedded: modules/box/pkg.ps1
+✓ Embedded: modules/box/status.ps1
+✓ Embedded: modules/box/uninstall.ps1
+✓ Embedded: modules/box/version.ps1
+✓ Embedded: modules/shared/pkg/dependencies.ps1
+✓ Embedded: modules/shared/pkg/detection.ps1
+✓ Embedded: modules/shared/pkg/extraction.ps1
+✓ Embedded: modules/shared/pkg/install.ps1
+✓ Embedded: modules/shared/pkg/list.ps1
+✓ Embedded: modules/shared/pkg/state.ps1
+✓ Embedded: modules/shared/pkg/uninstall.ps1
+
+✓ Build complete: C:\Users\reddoc\AppData\Local\Temp\5438dda3-6c72-4849-bda4-3583843fc517\54ac4e4f-a1b0-4e74-b95f-ecf2cd1095f2\dist\box.ps1
+  Size: 158.25 KB
+
+[+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-build-artifacts.ps1
+ 709ms (676ms|26ms)
+[+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-bootstrapper.ps1
+ 48ms (7ms|35ms)
+[+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-pkg-module.ps1
+ 128ms (79ms|42ms)
+Tests completed in 2.7s
+Tests Passed: 44, 
+Failed: 0, 
+Skipped: 0, 
+Inconclusive: 0, 
+
+NotRun: 0
+
+Containers            : {[+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-module-discovery-v2.ps1, [+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-module-loader.ps1, [+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-build-artifacts.ps1, [+] C:\Users\reddoc\Projects\amiga-projects\DevBoxFoundry\tests\test-bootstrapper.ps1…}
+Result                : Passed
+FailedCount           : 0
+FailedBlocksCount     : 0
+FailedContainersCount : 0
+PassedCount           : 44
+SkippedCount          : 0
+InconclusiveCount     : 0
+NotRunCount           : 0
+TotalCount            : 44
+Duration              : 00:00:02.6969756
+Executed              : True
+ExecutedAt            : 17.01.2026 03:23:22
+Version               : 5.7.1
+PSVersion             : 7.5.4
+PSBoundParameters     : {[Path, System.String[]], [PassThru, True]}
+Plugins               : 
+PluginConfiguration   : 
+PluginData            : 
+Configuration         : PesterConfiguration
+DiscoveryDuration     : 00:00:00.0816520
+UserDuration          : 00:00:02.3882878
+FrameworkDuration     : 00:00:00.2270358
+Failed                : {}
+FailedBlocks          : {}
+FailedContainers      : {}
+Passed                : {[+] selects box roots before scanning and prefers .box overrides, [+] uses boxing root modules in boxer mode, [+] routes boxer install when no external override, [+] keeps box pkg default and help when no external override…}
+Skipped               : {}
+Inconclusive          : {}
+NotRun                : {}
+Tests                 : {[+] selects box roots before scanning and prefers .box overrides, [+] uses boxing root modules in boxer mode, [+] routes boxer install when no external override, [+] keeps box pkg default and help when no external override…}
+CodeCoverage          : 
+

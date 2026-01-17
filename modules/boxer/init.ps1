@@ -721,7 +721,7 @@ if (Test-Path `$boxingInit) {
             Write-Host "    boxer init MyProject" -ForegroundColor White
             Write-Host ""
             Write-Host "  💡 Recommended: Restart PowerShell for permanent installation" -ForegroundColor Yellow
-            Write-Host "     (functions work now, but restart ensures they persist)" -ForegroundColor DarkGray
+            Write-Host ""
         }
         # Update or already up-to-date: no additional message needed
 
