@@ -816,7 +816,9 @@ function Show-Help {
             $lines += ("  {0,-12} {1} {2}" -f $name, $sourceLabel, $displaySynopsis)
         }
 
-        $lines | ForEach-Object { Write-Output $_ }
+        foreach ($line in $lines) {
+            Write-Output $line
+        }
         return
     }
 
@@ -895,8 +897,8 @@ function Show-Help {
 
             if ($helpHandler) {
                 $helpOutput = & $helpHandler @()
-                if ($helpOutput) { $helpOutput | ForEach-Object { Write-Verbose $_ } }
-                return $helpOutput
+                if ($helpOutput) { $helpOutput | ForEach-Object { Write-Output $_ } }
+                return
             }
 
             if ($handler) {
