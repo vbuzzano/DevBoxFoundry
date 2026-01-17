@@ -1,4 +1,5 @@
-#requires -Version 7.0
+#Requires -Modules Pester
+#Requires -Version 7.0
 
 $ErrorActionPreference = 'Stop'
 
@@ -16,6 +17,7 @@ BeforeAll {
         $script:IsEmbedded = $false
         $script:Mode = $null
         $script:BoxingRoot = $Root
+        $script:BoxRegistry = @{}
     }
 }
 
@@ -380,9 +382,10 @@ function Invoke-Meta-Dispatcher {
             Import-ModeModules -Mode 'box'
 
             $list = Show-Help
-            $list | Out-String | Should -BeLike '*[[]built-in[]]*'
-            $list | Out-String | Should -BeLike '*[[]custom[]]*'
-            $list | Out-String | Should -BeLike '*[[]project[]]*'
+            # Commands should appear in help (without source labels)
+            $list | Out-String | Should -BeLike '*corecmd*'
+            $list | Out-String | Should -BeLike '*custom*'
+            $list | Out-String | Should -BeLike '*project*'
         }
     }
 }

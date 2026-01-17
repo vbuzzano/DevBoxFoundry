@@ -1,3 +1,5 @@
+#Requires -Modules Pester
+
 # Test - boxing.ps1 bootstrapper validation
 #
 # Tests the core bootstrapping functionality including:

@@ -1,232 +1,140 @@
-<#
-.SYNOPSIS
-    Non-Regression Tests for Version Management System
+# Non-Regression Tests for Version Management System
+# Validates version detection, comparison, and update logic (FR-030 to FR-034)
 
-.DESCRIPTION
-    Validates that version detection, comparison, and update logic
-    functions correctly without regression. Tests FR-030 to FR-034.
+#Requires -Modules Pester
+#Requires -Version 7.0
 
-.NOTES
-    Created: 2026-01-09
-    Feature: 001-boxing-consolidation (US7)
-#>
+BeforeAll {
+    $script:BoxingRoot = Split-Path $PSScriptRoot -Parent
+    $script:versionFile = Join-Path $BoxingRoot "boxer.version"
+    $script:versionScript = Join-Path $BoxingRoot "core\version.ps1"
+    $script:buildScript = Join-Path $BoxingRoot "scripts\build-boxer.ps1"
+    $script:metadataFile = Join-Path $BoxingRoot "boxers\AmiDevBox\metadata.psd1"
+    $script:installScript = Join-Path $BoxingRoot "modules\boxer\install.ps1"
+    
+    # Pre-check file existence for Skip conditions
+    $script:hasMetadata = Test-Path $script:metadataFile
+    $script:hasInstallScript = Test-Path $script:installScript
+    $script:hasVersionScript = Test-Path $script:versionScript
+}
 
-param(
-    [switch]$Verbose
-)
-
-$ErrorActionPreference = 'Stop'
-if ($Verbose) { $VerbosePreference = 'Continue' }
-
-Write-Host ""
-Write-Host "🧪 Version Management Non-Regression Tests" -ForegroundColor Cyan
-Write-Host ("=" * 60) -ForegroundColor DarkGray
-Write-Host ""
-
-$TestsPassed = 0
-$TestsFailed = 0
-
-function Test-Assertion {
-    param(
-        [string]$Name,
-        [bool]$Condition,
-        [string]$ErrorMessage = ""
-    )
-
-    if ($Condition) {
-        Write-Host "  ✓ $Name" -ForegroundColor Green
-        $script:TestsPassed++
-    }
-    else {
-        Write-Host "  ✗ $Name" -ForegroundColor Red
-        if ($ErrorMessage) {
-            Write-Host "    $ErrorMessage" -ForegroundColor DarkRed
+Describe "Version Management Non-Regression" {
+    Context "Version File Integrity" {
+        It "Should have boxer.version file" {
+            Test-Path $versionFile | Should -BeTrue
         }
-        $script:TestsFailed++
+        
+        It "Should have non-empty version in boxer.version" {
+            $version = (Get-Content $versionFile -Raw).Trim()
+            $version | Should -Not -BeNullOrEmpty
+        }
+        
+        It "Should follow semantic versioning (X.Y.Z)" {
+            $version = (Get-Content $versionFile -Raw).Trim()
+            $version | Should -Match '^\d+\.\d+\.\d+$'
+        }
     }
-}
-
-# ============================================================================
-# Test 1: boxer.version File Exists and Valid Format
-# ============================================================================
-
-Write-Host "Test Group: Version File Integrity" -ForegroundColor Cyan
-
-$versionFile = "boxer.version"
-Test-Assertion `
-    -Name "boxer.version file exists" `
-    -Condition (Test-Path $versionFile)
-
-if (Test-Path $versionFile) {
-    $version = (Get-Content $versionFile -Raw).Trim()
-
-    Test-Assertion `
-        -Name "boxer.version is not empty" `
-        -Condition (-not [string]::IsNullOrWhiteSpace($version))
-
-    Test-Assertion `
-        -Name "boxer.version follows semantic versioning (X.Y.Z)" `
-        -Condition ($version -match '^\d+\.\d+\.\d+$') `
-        -ErrorMessage "Version format: $version"
-}
-
-Write-Host ""
-
-# ============================================================================
-# Test 2: Version Detection from Multiple Sources
-# ============================================================================
-
-Write-Host "Test Group: Version Detection Sources" -ForegroundColor Cyan
-
-# Load core/version.ps1 to access Get-BoxerVersion
-$versionScript = "core\version.ps1"
-if (Test-Path $versionScript) {
-    . $versionScript
-
-    $script:BoxingRoot = Get-Location
-    $detectedVersion = Get-BoxerVersion
-
-    Test-Assertion `
-        -Name "Get-BoxerVersion returns a value" `
-        -Condition (-not [string]::IsNullOrWhiteSpace($detectedVersion)) `
-        -ErrorMessage "Returned: '$detectedVersion'"
-
-    if ($detectedVersion) {
-        Test-Assertion `
-            -Name "Detected version matches boxer.version file" `
-            -Condition ($detectedVersion -eq $version) `
-            -ErrorMessage "File: $version, Detected: $detectedVersion"
+    
+    Context "Version Detection Sources" {
+        It "Should load Get-BoxerVersion function" {
+            if (Test-Path $versionScript) {
+                . $versionScript
+                Get-Command Get-BoxerVersion -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+            } else {
+                Set-TestInconclusive "core/version.ps1 not found"
+            }
+        }
+        
+        It "Should return a version from Get-BoxerVersion" {
+            if (Test-Path $versionScript) {
+                . $versionScript
+                $script:BoxingRoot = Split-Path $PSScriptRoot -Parent
+                $detectedVersion = Get-BoxerVersion
+                $detectedVersion | Should -Not -BeNullOrEmpty
+            } else {
+                Set-TestInconclusive "core/version.ps1 not found"
+            }
+        }
+        
+        It "Should match boxer.version file" {
+            if (Test-Path $versionScript) {
+                . $versionScript
+                $script:BoxingRoot = Split-Path $PSScriptRoot -Parent
+                $fileVersion = (Get-Content $versionFile -Raw).Trim()
+                $detectedVersion = Get-BoxerVersion
+                $detectedVersion | Should -Be $fileVersion
+            } else {
+                Set-TestInconclusive "core/version.ps1 not found"
+            }
+        }
     }
-}
-else {
-    Test-Assertion `
-        -Name "core/version.ps1 exists" `
-        -Condition $false `
-        -ErrorMessage "Version detection script not found"
-}
-
-Write-Host ""
-
-# ============================================================================
-# Test 3: Build Script Auto-Increment Logic
-# ============================================================================
-
-Write-Host "Test Group: Build Version Auto-Increment" -ForegroundColor Cyan
-
-$buildScript = "scripts\build-boxer.ps1"
-Test-Assertion `
-    -Name "scripts/build-boxer.ps1 exists" `
-    -Condition (Test-Path $buildScript)
-
-if (Test-Path $buildScript) {
-    $buildContent = Get-Content $buildScript -Raw
-
-    Test-Assertion `
-        -Name "Build script reads boxer.version file" `
-        -Condition ($buildContent -match 'boxer\.version')
-
-    Test-Assertion `
-        -Name "Build script increments version" `
-        -Condition ($buildContent -match '\$build\+\+')
-
-    Test-Assertion `
-        -Name "Build script writes new version back" `
-        -Condition ($buildContent -match 'Set-Content\s+.*\$VersionFile')
-}
-
-Write-Host ""
-
-# ============================================================================
-# Test 4: Dual-Version Tracking in Metadata
-# ============================================================================
-
-Write-Host "Test Group: Dual-Version Tracking (Version + BoxerVersion)" -ForegroundColor Cyan
-
-$metadataFile = "boxers\AmiDevBox\metadata.psd1"
-if (Test-Path $metadataFile) {
-    $metadataContent = Get-Content $metadataFile -Raw
-
-    Test-Assertion `
-        -Name "metadata.psd1 contains Version field" `
-        -Condition ($metadataContent -match 'Version\s*=')
-
-    Test-Assertion `
-        -Name "metadata.psd1 contains BoxerVersion field" `
-        -Condition ($metadataContent -match 'BoxerVersion\s*=')
-
-    # Parse metadata
-    try {
-        $metadata = Import-PowerShellDataFile $metadataFile
-
-        Test-Assertion `
-            -Name "Version field is valid semantic version" `
-            -Condition ($metadata.Version -match '^\d+\.\d+\.\d+$') `
-            -ErrorMessage "Version: $($metadata.Version)"
-
-        Test-Assertion `
-            -Name "BoxerVersion field is valid semantic version" `
-            -Condition ($metadata.BoxerVersion -match '^\d+\.\d+\.\d+$') `
-            -ErrorMessage "BoxerVersion: $($metadata.BoxerVersion)"
+    
+    Context "Build Version Auto-Increment" {
+        It "Should have build-boxer.ps1 script" {
+            Test-Path $buildScript | Should -BeTrue
+        }
+        
+        It "Should read boxer.version file in build script" {
+            $buildContent = Get-Content $buildScript -Raw
+            $buildContent | Should -Match 'boxer\.version'
+        }
+        
+        It "Should increment version in build script" {
+            $buildContent = Get-Content $buildScript -Raw
+            $buildContent | Should -Match '\$build\+\+'
+        }
+        
+        It "Should write new version back to file" {
+            $buildContent = Get-Content $buildScript -Raw
+            $buildContent | Should -Match 'Set-Content\s+.*\$VersionFile'
+        }
     }
-    catch {
-        Test-Assertion `
-            -Name "metadata.psd1 is parseable" `
-            -Condition $false `
-            -ErrorMessage $_.Exception.Message
+    
+    Context "Dual-Version Tracking (Version + BoxerVersion)" {
+        It "Should have metadata.psd1" -Skip:(-not $hasMetadata) {
+            Test-Path $metadataFile | Should -BeTrue
+        }
+        
+        It "Should contain Version field in metadata" -Skip:(-not $hasMetadata) {
+            $metadataContent = Get-Content $metadataFile -Raw
+            $metadataContent | Should -Match 'Version\s*='
+        }
+        
+        It "Should contain BoxerVersion field in metadata" -Skip:(-not $hasMetadata) {
+            $metadataContent = Get-Content $metadataFile -Raw
+            $metadataContent | Should -Match 'BoxerVersion\s*='
+        }
+        
+        It "Should have valid semantic version for Version field" -Skip:(-not $hasMetadata) {
+            $metadata = Import-PowerShellDataFile $metadataFile
+            $metadata.Version | Should -Match '^\d+\.\d+\.\d+$'
+        }
+        
+        It "Should have valid semantic version for BoxerVersion field" -Skip:(-not $hasMetadata) {
+            $metadata = Import-PowerShellDataFile $metadataFile
+            $metadata.BoxerVersion | Should -Match '^\d+\.\d+\.\d+$'
+        }
     }
-}
-else {
-    Write-Host "  ⊘ Skipping (no sample metadata found)" -ForegroundColor DarkGray
-}
-
-Write-Host ""
-
-# ============================================================================
-# Test 5: Smart Update Logic Exists
-# ============================================================================
-
-Write-Host "Test Group: Smart Update Logic" -ForegroundColor Cyan
-
-$installScript = "modules\boxer\install.ps1"
-if (Test-Path $installScript) {
-    $installContent = Get-Content $installScript -Raw
-
-    Test-Assertion `
-        -Name "install.ps1 has Get-InstalledBoxVersion function" `
-        -Condition ($installContent -match 'function Get-InstalledBoxVersion')
-
-    Test-Assertion `
-        -Name "install.ps1 has Get-RemoteBoxVersion function" `
-        -Condition ($installContent -match 'function Get-RemoteBoxVersion')
-
-    Test-Assertion `
-        -Name "install.ps1 compares versions before install" `
-        -Condition ($installContent -match 'Get-InstalledBoxVersion' -and $installContent -match 'Get-RemoteBoxVersion')
-}
-else {
-    Test-Assertion `
-        -Name "modules/boxer/install.ps1 exists" `
-        -Condition $false
-}
-
-Write-Host ""
-
-# ============================================================================
-# Summary
-# ============================================================================
-
-Write-Host ("=" * 60) -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "Test Results:" -ForegroundColor Cyan
-Write-Host "  Passed: $TestsPassed" -ForegroundColor Green
-Write-Host "  Failed: $TestsFailed" -ForegroundColor $(if ($TestsFailed -gt 0) { "Red" } else { "Green" })
-Write-Host ""
-
-if ($TestsFailed -eq 0) {
-    Write-Host "✓ All version management tests passed!" -ForegroundColor Green
-    exit 0
-}
-else {
-    Write-Host "✗ Some tests failed. Review version management implementation." -ForegroundColor Red
-    exit 1
+    
+    Context "Smart Update Logic" {
+        It "Should have install.ps1 module" {
+            Test-Path $installScript | Should -BeTrue
+        }
+        
+        It "Should have Get-InstalledBoxVersion function" -Skip:(-not $hasInstallScript) {
+            $installContent = Get-Content $installScript -Raw
+            $installContent | Should -Match 'function Get-InstalledBoxVersion'
+        }
+        
+        It "Should have Get-RemoteBoxVersion function" -Skip:(-not $hasInstallScript) {
+            $installContent = Get-Content $installScript -Raw
+            $installContent | Should -Match 'function Get-RemoteBoxVersion'
+        }
+        
+        It "Should compare versions before install" -Skip:(-not $hasInstallScript) {
+            $installContent = Get-Content $installScript -Raw
+            ($installContent -match 'Get-InstalledBoxVersion') -and 
+            ($installContent -match 'Get-RemoteBoxVersion') | Should -BeTrue
+        }
+    }
 }

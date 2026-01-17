@@ -1,3 +1,5 @@
+#Requires -Modules Pester
+
 Describe "Pkg module" {
     BeforeAll {
         $global:BaseDir = "TestDrive:\project"
@@ -10,6 +12,10 @@ Describe "Pkg module" {
         New-Item -ItemType Directory -Path $global:VendorDir -Force | Out-Null
         New-Item -ItemType Directory -Path (Split-Path $global:StateFile -Parent) -Force | Out-Null
         New-Item -ItemType Directory -Path $global:TempDir -Force | Out-Null
+
+        # Initialize boxing variables
+        $script:IsEmbedded = $false
+        $script:BoxingRoot = Split-Path $PSScriptRoot -Parent
 
         . (Join-Path $PSScriptRoot "..\core\common.ps1")
 

@@ -1,4 +1,5 @@
-#requires -Version 7.0
+#Requires -Modules Pester
+#Requires -Version 7.0
 
 $ErrorActionPreference = 'Stop'
 
