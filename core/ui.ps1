@@ -167,7 +167,10 @@ function Ask-Path {
 # Display Functions
 # ============================================================================
 
-function Show-Help {
+# DEPRECATED: Show-Help moved to boxing.ps1 (spec-003 module system v2)
+# This function is kept for backward compatibility but should not be used
+# The authoritative Show-Help is now in boxing.ps1
+function Show-Help-Legacy {
     Write-Host ""
     Write-Host "Boxing - Reproducible Environment Manager" -ForegroundColor Cyan
     Write-Host ""
