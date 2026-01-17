@@ -2,8 +2,12 @@
 
 $ErrorActionPreference = 'Stop'
 
-. "$PSScriptRoot/fixtures/modules-gap/helpers.ps1"
 . (Join-Path $PSScriptRoot '..' 'boxing.ps1')
+
+BeforeAll {
+    . (Join-Path $PSScriptRoot '..' 'boxing.ps1')
+    . "$PSScriptRoot/fixtures/modules-gap/helpers.ps1"
+}
 
 Describe "Module loader (modules-gap)" {
     BeforeEach {
@@ -39,8 +43,8 @@ Describe "Module loader (modules-gap)" {
                 $errorRecord = $_
             }
 
-            $errorRecord | Should Not Be $null
-            $errorRecord.Exception.Message | Should Match 'metadata.psd1'
+            $errorRecord | Should -Not -Be $null
+            $errorRecord.Exception.Message | Should -Match 'metadata.psd1'
         }
 
         It "fails when required metadata keys are missing" {
@@ -54,8 +58,8 @@ Describe "Module loader (modules-gap)" {
                 $errorRecord = $_
             }
 
-            $errorRecord | Should Not Be $null
-            $errorRecord.Exception.Message | Should Match 'missing required metadata keys'
+            $errorRecord | Should -Not -Be $null
+            $errorRecord.Exception.Message | Should -Match 'missing required metadata keys'
         }
 
         It "prefers project override over core module" {
@@ -64,8 +68,8 @@ Describe "Module loader (modules-gap)" {
 
             Import-ModeModules -Mode 'box'
 
-            $script:Commands['alpha'] | Should Match '\\.box\\modules\\alpha.ps1'
-            $script:LoadedModules['alpha.ps1'] | Should Be $overridePath
+            $script:Commands['alpha'] | Should -Match '\\.box\\modules\\alpha.ps1'
+            $script:LoadedModules['alpha.ps1'] | Should -Be $overridePath
         }
     }
 
@@ -81,9 +85,9 @@ Describe "Module loader (modules-gap)" {
                 $errorRecord = $_
             }
 
-            $errorRecord | Should Not Be $null
-            $errorRecord.Exception.Message | Should Match 'missing entrypoints'
-            $errorRecord.Exception.Message | Should Match 'pkg'
+            $errorRecord | Should -Not -Be $null
+            $errorRecord.Exception.Message | Should -Match 'missing entrypoints'
+            $errorRecord.Exception.Message | Should -Match 'pkg'
         }
 
         It "blocks functions not declared in metadata unless private" {
@@ -97,9 +101,9 @@ Describe "Module loader (modules-gap)" {
                 $errorRecord = $_
             }
 
-            $errorRecord | Should Not Be $null
-            $errorRecord.Exception.Message | Should Match 'undeclared functions'
-            $errorRecord.Exception.Message | Should Match 'hidden'
+            $errorRecord | Should -Not -Be $null
+            $errorRecord.Exception.Message | Should -Match 'undeclared functions'
+            $errorRecord.Exception.Message | Should -Match 'hidden'
         }
     }
 
@@ -120,7 +124,7 @@ Describe "Module loader (modules-gap)" {
 
             Register-EmbeddedCommands -Mode 'box'
 
-            $script:Commands.Keys | Sort-Object | Should Be $expected
+            $script:Commands.Keys | Sort-Object | Should -Be $expected
         }
 
         It "strips subcommand suffixes and dedupes base commands in embedded mode" {
@@ -141,7 +145,7 @@ function Invoke-Box-Pkg-Validate-State { 'validate-state' }
             Register-EmbeddedCommands -Mode 'box'
 
             $cmds = $script:Commands.Keys | Sort-Object
-            $cmds | Should Be @('pkg')
+            $cmds | Should -Be @('pkg')
         }
     }
 }
