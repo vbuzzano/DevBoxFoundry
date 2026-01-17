@@ -7,26 +7,29 @@
 function Get-InstalledVersion {
     <#
     .SYNOPSIS
-    Gets the version from a metadata.psd1 file.
+    Gets the version from an installed boxer.ps1 file.
 
-    .PARAMETER MetadataPath
-    Path to metadata.psd1 file
+    .PARAMETER BoxerPath
+    Path to boxer.ps1 file
 
     .OUTPUTS
     Version string (e.g., "1.0.0") or $null if not found
     #>
     param(
         [Parameter(Mandatory=$true)]
-        [string]$MetadataPath
+        [string]$BoxerPath
     )
 
-    if (-not (Test-Path $MetadataPath)) {
+    if (-not (Test-Path $BoxerPath)) {
         return $null
     }
 
     try {
-        $metadata = Import-PowerShellDataFile -Path $MetadataPath -ErrorAction Stop
-        return $metadata.Version
+        $content = Get-Content $BoxerPath -Raw
+        if ($content -match '\$script:BoxerVersion\s*=\s*"([^"]+)"') {
+            return $Matches[1]
+        }
+        return $null
     } catch {
         return $null
     }
@@ -533,8 +536,8 @@ function Install-BoxingSystem {
         # Always set source repo for AmiDevBox release (hardcoded in dist build)
         $SourceRepo = "AmiDevBox"
 
-        # Get versions for comparison
-        $InstalledVersion = Get-InstalledVersion -MetadataPath $BoxerMetadataPath
+        # Get versions for comparison (read from actual file, not metadata)
+        $InstalledVersion = Get-InstalledVersion -BoxerPath $BoxerPath
 
         # Get new version via core API (works in all modes)
         $NewVersion = Get-BoxerVersion
@@ -754,12 +757,13 @@ function Install-CurrentBox {
         $BoxesDir = Join-Path $BoxingDir "Boxes"
         $BoxDir = Join-Path $BoxesDir $BoxName
         $BoxMetadataPath = Join-Path $BoxDir "metadata.psd1"
+        $BoxScriptPath = Join-Path $BoxDir "box.ps1"
 
         # Base URL for downloads
         $BaseUrl = "https://raw.githubusercontent.com/vbuzzano/$BoxName/main"
 
-        # Get installed version and boxer version
-        $InstalledVersion = Get-InstalledVersion -MetadataPath $BoxMetadataPath
+        # Get installed version from box.ps1 file (source of truth)
+        $InstalledVersion = Get-InstalledVersion -BoxerPath $BoxScriptPath
         $InstalledBoxerVersion = $null
         if (Test-Path $BoxMetadataPath) {
             $metadata = Import-PowerShellDataFile $BoxMetadataPath
