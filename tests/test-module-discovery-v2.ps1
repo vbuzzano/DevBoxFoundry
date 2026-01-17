@@ -4,15 +4,19 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot '..' 'boxing.ps1')
 
-function Reset-TestState {
-    param([string]$Root)
+BeforeAll {
+    . (Join-Path $PSScriptRoot '..' 'boxing.ps1')
 
-    $script:Commands = @{}
-    $script:CommandRegistry = @{}
-    $script:LoadedModules = @{}
-    $script:IsEmbedded = $false
-    $script:Mode = $null
-    $script:BoxingRoot = $Root
+    function Reset-TestState {
+        param([string]$Root)
+
+        $script:Commands = @{}
+        $script:CommandRegistry = @{}
+        $script:LoadedModules = @{}
+        $script:IsEmbedded = $false
+        $script:Mode = $null
+        $script:BoxingRoot = $Root
+    }
 }
 
 Describe "Module discovery v2" {
@@ -62,7 +66,7 @@ param(
 'project:' + ($InputArgs -join ',')
 '@
 
-            Initialize-Boxing -Arguments @('alpha', 'one', 'two') | Should Be 'custom:one,two'
+            Initialize-Boxing -Arguments @('alpha', 'one', 'two') | Should -Be 'custom:one,two'
         }
 
         It "uses boxing root modules in boxer mode" {
@@ -78,7 +82,7 @@ param(
 'boxer:' + ($InputArgs -join ',')
 '@
 
-            Initialize-Boxing -Arguments @('beta', 'a') | Should Be 'boxer:a'
+            Initialize-Boxing -Arguments @('beta', 'a') | Should -Be 'boxer:a'
         }
     }
 
@@ -100,7 +104,7 @@ function Invoke-Boxer-Install {
 
             Import-ModeModules -Mode 'boxer'
 
-            Invoke-Command -CommandName 'install' -Arguments @('one', 'two') | Should Be 'embedded-boxer:one,two'
+            Invoke-Command -CommandName 'install' -Arguments @('one', 'two') | Should -Be 'embedded-boxer:one,two'
         }
 
         It "keeps box pkg default and help when no external override" {
@@ -124,10 +128,10 @@ Embedded pkg command
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'pkg' -Arguments @('a') | Should Be 'embedded-pkg:a'
+            Invoke-Command -CommandName 'pkg' -Arguments @('a') | Should -Be 'embedded-pkg:a'
 
             $list = Show-Help
-            $list | Out-String | Should BeLike '*pkg*'
+            $list | Out-String | Should -BeLike '*pkg*'
         }
     }
 
@@ -143,7 +147,7 @@ Embedded pkg command
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'hello' -Arguments @('one', 'two') | Should Be 'hello:one|two'
+            Invoke-Command -CommandName 'hello' -Arguments @('one', 'two') | Should -Be 'hello:one|two'
         }
 
         It "executes directory module default and subcommand" {
@@ -152,8 +156,8 @@ Embedded pkg command
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'foo' -Arguments @('a', 'b') | Should Be 'foo-default:a|b'
-            Invoke-Command -CommandName 'foo' -Arguments @('bar', 'x') | Should Be 'foo-bar:x'
+            Invoke-Command -CommandName 'foo' -Arguments @('a', 'b') | Should -Be 'foo-default:a|b'
+            Invoke-Command -CommandName 'foo' -Arguments @('bar', 'x') | Should -Be 'foo-bar:x'
         }
 
         It "prefers external modules over embedded when names collide" {
@@ -170,7 +174,7 @@ function Invoke-Box-Hello {
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'hello' -Arguments @() | Should Be 'hello:'
+            Invoke-Command -CommandName 'hello' -Arguments @() | Should -Be 'hello:'
         }
     }
 
@@ -199,8 +203,8 @@ function Invoke-Box-Pkg {
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'hello' -Arguments @('x') | Should Be 'hello:x'
-            Invoke-Command -CommandName 'pkg' -Arguments @('y') | Should Be 'embedded-pkg:y'
+            Invoke-Command -CommandName 'hello' -Arguments @('x') | Should -Be 'hello:x'
+            Invoke-Command -CommandName 'pkg' -Arguments @('y') | Should -Be 'embedded-pkg:y'
         }
     }
 
@@ -223,7 +227,7 @@ function Invoke-Box-Pkg {
 
             Import-ModeModules -Mode 'box'
 
-            $script:CommandRegistry.ContainsKey('bad') | Should Be $false
+            $script:CommandRegistry.ContainsKey('bad') | Should -Be $false
         }
 
         It "passes CommandPath to metadata dispatcher" {
@@ -232,7 +236,7 @@ function Invoke-Box-Pkg {
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'route' -Arguments @('foo', 'bar') | Should Be 'dispatch:route>foo|bar'
+            Invoke-Command -CommandName 'route' -Arguments @('foo', 'bar') | Should -Be 'dispatch:route>foo|bar'
         }
     }
 
@@ -257,7 +261,7 @@ function Invoke-Box-Echo {
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'echo' -Arguments @('a', '--flag', 'b') | Should Be 'a|--flag|b'
+            Invoke-Command -CommandName 'echo' -Arguments @('a', '--flag', 'b') | Should -Be 'a|--flag|b'
         }
 
         It "forwards args unchanged to external single-file modules" {
@@ -272,7 +276,7 @@ $InputArgs -join '|'
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'echoext' -Arguments @('a', '--flag', 'b') | Should Be 'a|--flag|b'
+            Invoke-Command -CommandName 'echoext' -Arguments @('a', '--flag', 'b') | Should -Be 'a|--flag|b'
         }
 
         It "forwards args unchanged to metadata handlers and dispatchers" {
@@ -304,8 +308,8 @@ function Invoke-Meta-Dispatcher {
 
             Import-ModeModules -Mode 'box'
 
-            Invoke-Command -CommandName 'meta' -Arguments @('x', 'y') | Should Be 'x;y'
-            Invoke-Command -CommandName 'router' -Arguments @('one', 'two') | Should Be 'router>one|two'
+            Invoke-Command -CommandName 'meta' -Arguments @('x', 'y') | Should -Be 'x;y'
+            Invoke-Command -CommandName 'router' -Arguments @('one', 'two') | Should -Be 'router>one|two'
         }
     }
 
@@ -335,7 +339,7 @@ function Invoke-Meta-Dispatcher {
             Import-ModeModules -Mode 'box'
 
             $helpOutput = Show-Help -CommandPath @('helpmod')
-            $helpOutput | Should Contain 'help-called'
+            $helpOutput | Should -Contain 'help-called'
         }
 
         It "lists subcommands when no default handler exists" {
@@ -347,13 +351,13 @@ function Invoke-Meta-Dispatcher {
             Import-ModeModules -Mode 'box'
 
             $output = Invoke-Command -CommandName 'nodflt' -Arguments @()
-            $output | Out-String | Should BeLike '*Available subcommands*'
-            $output | Out-String | Should BeLike '*one*'
-            $output | Out-String | Should BeLike '*two*'
+            $output | Out-String | Should -BeLike '*Available subcommands*'
+            $output | Out-String | Should -BeLike '*one*'
+            $output | Out-String | Should -BeLike '*two*'
 
             $help = Show-Help -CommandPath @('nodflt')
-            $help | Out-String | Should BeLike '*one*'
-            $help | Out-String | Should BeLike '*two*'
+            $help | Out-String | Should -BeLike '*one*'
+            $help | Out-String | Should -BeLike '*two*'
         }
     }
 
@@ -376,9 +380,9 @@ function Invoke-Meta-Dispatcher {
             Import-ModeModules -Mode 'box'
 
             $list = Show-Help
-            $list | Out-String | Should BeLike '*[[]built-in[]]*'
-            $list | Out-String | Should BeLike '*[[]custom[]]*'
-            $list | Out-String | Should BeLike '*[[]project[]]*'
+            $list | Out-String | Should -BeLike '*[[]built-in[]]*'
+            $list | Out-String | Should -BeLike '*[[]custom[]]*'
+            $list | Out-String | Should -BeLike '*[[]project[]]*'
         }
     }
 }
