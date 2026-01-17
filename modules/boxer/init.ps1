@@ -621,8 +621,6 @@ function box {
 
     & `$boxScript @args
 }
-
-Write-Host "✓ Boxing functions loaded (boxer, box)" -ForegroundColor Green
 "@
             $InitPath = Join-Path $BoxingDir "init.ps1"
             Set-Content -Path $InitPath -Value $InitScript -Encoding UTF8
