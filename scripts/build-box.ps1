@@ -89,6 +89,7 @@ param(
 
 # Embedded version information (injected by build script)
 `$script:BoxerVersion = "$BoxVersion"
+`$script:BoxName = "$BoxName"
 `$script:IsEmbedded = `$true
 `$script:Mode = 'box'
 

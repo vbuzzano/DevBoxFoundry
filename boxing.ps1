@@ -512,10 +512,10 @@ function Register-EmbeddedCommands {
         if (-not $script:CommandRegistry.ContainsKey($commandName)) {
             # Extract synopsis from function's help comment
             $helpInfo = Get-Help $funcName -ErrorAction SilentlyContinue
-            $synopsis = if ($helpInfo -and $helpInfo.Synopsis -and $helpInfo.Synopsis -ne $funcName) { 
-                $helpInfo.Synopsis 
-            } else { 
-                $null 
+            $synopsis = if ($helpInfo -and $helpInfo.Synopsis -and $helpInfo.Synopsis -ne $funcName) {
+                $helpInfo.Synopsis
+            } else {
+                $null
             }
 
             $script:CommandRegistry[$commandName] = @{
@@ -934,6 +934,74 @@ function Show-Help {
     }
 }
 
+# Update local .box if we're in a project and box matches current source
+function Update-LocalBoxIfNeeded {
+    # Check if .box exists in current directory
+    $localBoxDir = Join-Path (Get-Location) ".box"
+    if (-not (Test-Path $localBoxDir)) {
+        return
+    }
+
+    # Read local box metadata
+    $localMetadataPath = Join-Path $localBoxDir "metadata.psd1"
+    if (-not (Test-Path $localMetadataPath)) {
+        return
+    }
+
+    try {
+        $localMetadata = Import-PowerShellDataFile -Path $localMetadataPath
+        $localBoxName = $localMetadata.BoxName
+        $localVersion = $localMetadata.Version
+
+        # Get current script's box name (embedded variable set at build time)
+        $scriptBoxName = if ($script:BoxName) { $script:BoxName } else { "AmiDevBox" }
+            return
+        }
+
+        # Get new version from current script
+        $newVersion = Get-BoxerVersion
+
+        # Compare versions
+        if ($localVersion -eq $newVersion) {
+            Write-Host ""
+            Write-Host "=== Local .box ===" -ForegroundColor Cyan
+            Write-Host "✓ Already up-to-date (v$localVersion)" -ForegroundColor Green
+            return
+        }
+
+        # Update needed
+        Write-Host ""
+        Write-Host "=== Updating local .box ===" -ForegroundColor Cyan
+        Write-Host "  $localVersion → $newVersion" -ForegroundColor Gray
+
+        # Get source from Boxing/Boxes
+        $BoxingDir = "$env:USERPROFILE\Documents\PowerShell\Boxing"
+        $SourceBoxDir = Join-Path $BoxingDir "Boxes\$scriptBoxName"
+
+        if (-not (Test-Path $SourceBoxDir)) {
+            Write-Host "  ⚠ Source not found, skipping update" -ForegroundColor Yellow
+            return
+        }
+
+        # Remove and recreate .box
+        Remove-Item -Path $localBoxDir -Recurse -Force -ErrorAction Stop
+        Copy-Item -Path $SourceBoxDir -Destination $localBoxDir -Recurse -Force -ErrorAction Stop
+
+        # Remove boxer.ps1 if it was copied (not needed in projects)
+        $boxerInProject = Join-Path $localBoxDir "boxer.ps1"
+        if (Test-Path $boxerInProject) {
+            Remove-Item -Path $boxerInProject -Force
+        }
+
+        Write-Host "✓ Local .box updated to v$newVersion" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "⚠ Restart your PowerShell session to use the new version" -ForegroundColor Yellow
+
+    } catch {
+        Write-Verbose "Failed to update local .box: $_"
+    }
+}
+
 # Main bootstrapping function
 function Initialize-Boxing {
     param(
@@ -960,18 +1028,27 @@ function Initialize-Boxing {
                         Write-Host ""
                         Write-Host "🔄 Boxer update: $InstalledVersion → $CurrentVersion" -ForegroundColor Cyan
                         Install-BoxingSystem | Out-Null
+
+                        # Check if we're in a project directory with .box
+                        Update-LocalBoxIfNeeded
                         return
                     } elseif ($InstalledVersion -and $CurrentVersion) {
                         # Already up-to-date or newer installed
                         Write-Host "✓ Boxer already up-to-date (v$InstalledVersion)" -ForegroundColor Green
                         # Check if box needs update (Install-BoxingSystem handles this)
                         Install-BoxingSystem | Out-Null
+
+                        # Check if we're in a project directory with .box
+                        Update-LocalBoxIfNeeded
                         return
                     }
                 } catch {
                     # Version parsing failed, skip update
                 }
-            } else {
+            } el
+                # Check if we're in a project directory with .box
+                Update-LocalBoxIfNeeded
+                se {
                 # First-time installation
                 Install-BoxingSystem | Out-Null
                 return
