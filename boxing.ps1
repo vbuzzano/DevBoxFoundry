@@ -231,6 +231,11 @@ function Register-ExternalModules {
     foreach ($file in $fileModules) {
         $commandName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name).ToLower()
 
+        if ($commandName -eq 'help') {
+            Write-Warning "Command 'help' is reserved (builtin). Module '$($file.Name)' ignored."
+            continue
+        }
+
         if ($script:CommandRegistry.ContainsKey($commandName)) { continue }
 
         $script:Commands[$commandName] = $file.FullName
@@ -265,6 +270,13 @@ function Register-ExternalDirectoryModule {
         [string]$ModuleName,
         [string]$Source
     )
+
+    $commandName = $ModuleName.ToLower()
+
+    if ($commandName -eq 'help') {
+        Write-Warning "Command 'help' is reserved (builtin). Module directory '$ModuleName' ignored."
+        return
+    }
 
     $ps1Files = Get-ChildItem -Path $ModulePath -File -Filter '*.ps1' -ErrorAction SilentlyContinue
     $subcommands = @{}
@@ -337,6 +349,12 @@ function Register-MetadataModule {
 
     foreach ($entry in $metadata.Commands.GetEnumerator()) {
         $cmdName = $entry.Key.ToLower()
+        
+        if ($cmdName -eq 'help') {
+            Write-Warning "Command 'help' is reserved (builtin). Metadata command '$cmdName' in module '$moduleName' ignored."
+            continue
+        }
+        
         if ($script:CommandRegistry.ContainsKey($cmdName)) { continue }
 
         $config = $entry.Value
