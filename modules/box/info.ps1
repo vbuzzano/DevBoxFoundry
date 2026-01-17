@@ -2,6 +2,10 @@
 # Display detailed information for current box workspace
 
 function Invoke-Box-Info {
+<#
+.SYNOPSIS
+    Display detailed information for current box workspace
+#>
     Write-Host ""
     Write-Host "Box Workspace Information" -ForegroundColor Cyan
     Write-Host ("=" * 60) -ForegroundColor DarkGray

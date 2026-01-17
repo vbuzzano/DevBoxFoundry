@@ -349,12 +349,12 @@ function Register-MetadataModule {
 
     foreach ($entry in $metadata.Commands.GetEnumerator()) {
         $cmdName = $entry.Key.ToLower()
-        
+
         if ($cmdName -eq 'help') {
             Write-Warning "Command 'help' is reserved (builtin). Metadata command '$cmdName' in module '$moduleName' ignored."
             continue
         }
-        
+
         if ($script:CommandRegistry.ContainsKey($cmdName)) { continue }
 
         $config = $entry.Value
@@ -510,12 +510,21 @@ function Register-EmbeddedCommands {
         $registered[$commandName] = $true
 
         if (-not $script:CommandRegistry.ContainsKey($commandName)) {
+            # Extract synopsis from function's help comment
+            $helpInfo = Get-Help $funcName -ErrorAction SilentlyContinue
+            $synopsis = if ($helpInfo -and $helpInfo.Synopsis -and $helpInfo.Synopsis -ne $funcName) { 
+                $helpInfo.Synopsis 
+            } else { 
+                $null 
+            }
+
             $script:CommandRegistry[$commandName] = @{
                 Name = $commandName
                 Kind = 'embedded'
                 Source = 'built-in'
                 Handler = $funcName
                 Path = $func.ScriptBlock.File
+                Synopsis = $synopsis
             }
         }
 
@@ -698,7 +707,7 @@ function Invoke-Command {
 
     if ($normalized -eq 'help') {
         Show-Help -CommandPath $Arguments
-        return 0
+        return
     }
 
     if (-not $script:CommandRegistry.ContainsKey($normalized)) {
@@ -1000,10 +1009,13 @@ function Initialize-Boxing {
                 @()
             }
 
-            Invoke-Command -CommandName $command -Arguments $cmdArgs
+            $exitCode = Invoke-Command -CommandName $command -Arguments $cmdArgs
+            if ($exitCode -and $exitCode -ne 0) { return $exitCode }
+            return
         }
         else {
             Show-Help
+            return
         }
     }
     catch {

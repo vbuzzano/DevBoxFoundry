@@ -166,7 +166,7 @@ $content += @'
 
 # Ensure Arguments is an array (can be null in irm|iex context)
 if (-not $Arguments) { $Arguments = @() }
-Initialize-Boxing -Arguments $Arguments | Out-Null
+Initialize-Boxing -Arguments $Arguments
 
 '@
 

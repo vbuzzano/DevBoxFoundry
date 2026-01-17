@@ -2,7 +2,10 @@
 # Display version information for boxer and installed boxes
 
 function Invoke-Boxer-Version {
-    # Detect version (prefer embedded variable, fallback to file parsing)
+<#
+.SYNOPSIS
+    Display boxer version information
+#>
     $BoxerVersion = if ($script:BoxerVersion) {
         $script:BoxerVersion
     } else {
