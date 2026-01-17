@@ -95,6 +95,7 @@ param(
 
 # Embedded version information (injected by build script)
 `$script:BoxerVersion = "$BoxVersion"
+`$script:Mode = 'boxer'
 
 "@
 
