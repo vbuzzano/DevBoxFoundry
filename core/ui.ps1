@@ -167,41 +167,6 @@ function Ask-Path {
 # Display Functions
 # ============================================================================
 
-# DEPRECATED: Show-Help moved to boxing.ps1 (spec-003 module system v2)
-# This function is kept for backward compatibility but should not be used
-# The authoritative Show-Help is now in boxing.ps1
-function Show-Help-Legacy {
-    Write-Host ""
-    Write-Host "Boxing - Reproducible Environment Manager" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Commands:" -ForegroundColor Yellow
-
-    $cmdName = if ($script:Mode -eq 'boxer') { 'boxer' } else { 'box' }
-
-    # Generate help from registered commands dynamically
-    if ($script:Commands.Count -gt 0) {
-        $sortedCommands = $script:Commands.Keys | Sort-Object
-        foreach ($cmd in $sortedCommands) {
-            $description = switch ($cmd) {
-                'init'      { 'Create a new Box project' }
-                'list'      { 'List available Box types' }
-                'install'   { if ($script:Mode -eq 'boxer') { 'Install a Box from GitHub' } else { 'Install workspace packages' } }
-                'status'    { 'Show installation status' }
-                'env'       { 'Manage environment variables' }
-                'clean'     { 'Clean installation' }
-                'uninstall' { 'Remove all packages' }
-                'load'      { 'Load environment into current shell' }
-                'info'      { 'Show workspace information' }
-                'version'   { 'Show version' }
-                default     { $cmd }
-            }
-            $padding = ' ' * (16 - $cmd.Length)
-            Write-Host "  $cmdName $cmd$padding$description" -ForegroundColor White
-        }
-    }
-    Write-Host ""
-}
-
 function Show-List {
     Write-Host ""
     Write-Host "Installed Components:" -ForegroundColor Cyan
