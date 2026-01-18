@@ -1,10 +1,41 @@
 # ============================================================================
-# Common Functions - State Management
+# Common Functions - Utility & State Management
 # ============================================================================
 #
 # Consolidated common utilities, after extracting UI functions to ui.ps1
 # and config functions to config.ps1. This file now contains:
+# - Utility functions (descriptor field lookup)
 # - State management (Load/Save/Get/Set/Remove package state)
+
+# ============================================================================
+# Utility Functions
+# ============================================================================
+
+function Get-DescriptorField {
+    <#
+    .SYNOPSIS
+    Safely retrieves a field from a descriptor hashtable
+
+    .PARAMETER Descriptor
+    The descriptor hashtable
+
+    .PARAMETER Key
+    The key to retrieve
+
+    .EXAMPLE
+    $handler = Get-DescriptorField -Descriptor $entry -Key 'Handler'
+    #>
+    param(
+        [hashtable]$Descriptor,
+        [string]$Key
+    )
+
+    if ($Descriptor -and $Descriptor.ContainsKey($Key)) {
+        return $Descriptor[$Key]
+    }
+
+    return $null
+}
 
 # ============================================================================
 # State Management

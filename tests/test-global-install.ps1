@@ -29,31 +29,31 @@ Describe "Boxing Global Installation" {
             if (-not (Test-Path $TestScriptsDir)) {
                 New-Item -ItemType Directory -Path $TestScriptsDir -Force | Out-Null
             }
-            
+
             # Assert
             Test-Path $TestScriptsDir | Should -BeTrue
         }
     }
-    
+
     Context "Profile creation" {
         It "Should create profile.ps1 when missing" {
             # Arrange - Ensure profile doesn't exist
             if (Test-Path $TestProfilePath) {
                 Remove-Item $TestProfilePath -Force
             }
-            
+
             # Act - Create profile
             $profileDir = Split-Path $TestProfilePath -Parent
             if (-not (Test-Path $profileDir)) {
                 New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
             }
             New-Item -ItemType File -Path $TestProfilePath -Force | Out-Null
-            
+
             # Assert
             Test-Path $TestProfilePath | Should -BeTrue
         }
     }
-    
+
     Context "Region injection" {
         It "Should inject #region boxing block into profile" {
             # Arrange - Create test profile if needed
@@ -64,7 +64,7 @@ Describe "Boxing Global Installation" {
                 }
                 New-Item -ItemType File -Path $TestProfilePath -Force | Out-Null
             }
-            
+
             # Act - Inject #region block
             $injection = @'
 
@@ -78,23 +78,23 @@ if (Test-Path $BoxingPath) {
 #endregion boxing
 '@
             Add-Content -Path $TestProfilePath -Value $injection -Encoding UTF8
-            
+
             # Assert
             $content = Get-Content $TestProfilePath -Raw
             $content | Should -Match '#region boxing'
             $content | Should -Match '#endregion boxing'
         }
     }
-    
+
     Context "Duplicate installation prevention" {
         It "Should prevent duplicate #region injection" {
             # Arrange - Profile should already have #region from previous test
             $contentBefore = Get-Content $TestProfilePath -Raw
             $contentBefore | Should -Match '#region boxing'
-            
+
             # Act - Count occurrences
             $matches = ([regex]'#region boxing').Matches($contentBefore)
-            
+
             # Assert - Should be exactly one region
             $matches.Count | Should -Be 1
         }
