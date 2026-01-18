@@ -121,10 +121,10 @@ $content += @"
 
 "@
 
-# BOXER ONLY: Include only UI functions and version management (shared between boxer and box)
+# BOXER ONLY: Include only UI functions, version management, and help renderer (shared between boxer and box)
 # Workspace-specific files (download, extract, packages, etc.) are NOT needed for boxer
 # See: ~ANALYSIS-BOXER-ARCHITECTURE.md for rationale
-$coreInclude = @('ui.ps1', 'version.ps1')  # Display and version functions
+$coreInclude = @('ui.ps1', 'version.ps1', 'help.ps1')  # Display/version/help functions
 
 $coreFiles = Get-ChildItem -Path (Join-Path $RepoRoot "core") -Filter "*.ps1" |
     Where-Object { $_.Name -in $coreInclude } |
