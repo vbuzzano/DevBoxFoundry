@@ -147,11 +147,15 @@ if ($All) {
     }
 
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    Write-Host "`nSummary:" -ForegroundColor Cyan
-    Write-Host "  Total:  $($totalPassed + $totalFailed)" -ForegroundColor Gray
-    Write-Host "  Passed: $totalPassed" -ForegroundColor Green
-    if ($totalFailed -gt 0) {
-        Write-Host "  Failed: $totalFailed" -ForegroundColor Red
+
+    # Only show custom summary if there were legacy tests
+    if ($LegacyTests.Count -gt 0) {
+        Write-Host "`nSummary:" -ForegroundColor Cyan
+        Write-Host "  Total:  $($totalPassed + $totalFailed)" -ForegroundColor Gray
+        Write-Host "  Passed: $totalPassed" -ForegroundColor Green
+        if ($totalFailed -gt 0) {
+            Write-Host "  Failed: $totalFailed" -ForegroundColor Red
+        }
     }
 
     exit $totalFailed
