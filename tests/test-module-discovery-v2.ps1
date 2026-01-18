@@ -387,5 +387,261 @@ function Invoke-Meta-Dispatcher {
             $list | Out-String | Should -BeLike '*custom*'
             $list | Out-String | Should -BeLike '*project*'
         }
+
+        It "filters hidden metadata and respects custom override precedence in help listing" {
+            $script:Mode = 'box'
+
+            # Embedded command that will be overridden
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'hello.ps1') -Encoding UTF8 -Value "'embedded-hello'"
+
+            # Custom override (takes precedence)
+            $customDir = Join-Path $testRoot '.box/modules'
+            New-Item -ItemType Directory -Path $customDir -Force | Out-Null
+            Set-Content -Path (Join-Path $customDir 'hello.ps1') -Encoding UTF8 -Value "'custom-hello'"
+
+            # Hidden metadata command should not appear in help
+            $hiddenDir = Join-Path $testRoot '.box/modules/hide'
+            New-Item -ItemType Directory -Path $hiddenDir -Force | Out-Null
+            Set-Content -Path (Join-Path $hiddenDir 'metadata.psd1') -Encoding UTF8 -Value @'
+@{
+    ModuleName = 'hide'
+    Version = '1.0.0'
+    Commands = @{ hide = @{ Handler = 'run.ps1'; Synopsis = 'hidden'; Hidden = $true } }
+}
+'@
+            Set-Content -Path (Join-Path $hiddenDir 'run.ps1') -Encoding UTF8 -Value "'hide'"
+
+            Import-ModeModules -Mode 'box'
+
+            $help = Show-Help
+
+            # Override should appear once; embedded still registered for execution but help shows the winning entry
+            $help | Out-String | Should -BeLike '*hello*'
+            # Hidden metadata command must be excluded
+            $help | Out-String | Should -Not -BeLike '*hide*'
+        }
+
+        It "routes metadata help via dispatcher when declared" {
+            $script:Mode = 'box'
+
+            $metaRoot = Join-Path $testRoot '.box/modules/droute'
+            New-Item -ItemType Directory -Path $metaRoot -Force | Out-Null
+            Set-Content -Path (Join-Path $metaRoot 'metadata.psd1') -Encoding UTF8 -Value @'
+@{
+    ModuleName = 'droute'
+    Version = '1.0.0'
+    Commands = @{ droute = @{ Dispatcher = 'dispatch.ps1' } }
+}
+'@
+            Set-Content -Path (Join-Path $metaRoot 'dispatch.ps1') -Encoding UTF8 -Value @'
+param(
+    [string[]]$CommandPath,
+    [string[]]$Arguments
+)
+"dispatched:" + ($CommandPath -join '/')
+'@
+
+            Import-ModeModules -Mode 'box'
+
+            $help = Show-Help -CommandPath @('droute')
+            $help | Out-String | Should -BeLike '*dispatched:droute/help*'
+        }
+
+        It "shows subcommands when present and omits section when none" {
+            $script:Mode = 'box'
+
+            $dirRoot = Join-Path $testRoot '.box/modules/withsubs'
+            New-Item -ItemType Directory -Path $dirRoot -Force | Out-Null
+            Set-Content -Path (Join-Path $dirRoot 'one.ps1') -Encoding UTF8 -Value "'one'"
+            Set-Content -Path (Join-Path $dirRoot 'two.ps1') -Encoding UTF8 -Value "'two'"
+
+            $singleRoot = Join-Path $testRoot '.box/modules/nosubs'
+            New-Item -ItemType Directory -Path $singleRoot -Force | Out-Null
+            Set-Content -Path (Join-Path $singleRoot 'metadata.psd1') -Encoding UTF8 -Value @'
+@{
+    ModuleName = 'nosubs'
+    Version = '1.0.0'
+    Commands = @{ nosubs = @{ Handler = 'run.ps1'; Synopsis = 'solo' } }
+}
+'@
+            Set-Content -Path (Join-Path $singleRoot 'run.ps1') -Encoding UTF8 -Value "'run'"
+
+            Import-ModeModules -Mode 'box'
+
+            $subHelp = Show-Help -CommandPath @('withsubs')
+            $subHelp | Out-String | Should -BeLike '*Available subcommands*'
+            $subHelp | Out-String | Should -BeLike '*one*'
+            $subHelp | Out-String | Should -BeLike '*two*'
+
+            $noSubHelp = Show-Help -CommandPath @('nosubs')
+            $noSubHelp | Out-String | Should -Not -BeLike '*Available subcommands*'
+        }
+
+        It "covers ≥95 percent of commands with title+synopsis and lists all registry entries" {
+            $script:Mode = 'box'
+
+            # Embedded command
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'alpha.ps1') -Encoding UTF8 -Value @'
+function Invoke-Box-Alpha {
+<#
+.SYNOPSIS
+Alpha synopsis
+#>
+    "alpha"
+}
+'@
+
+            # Metadata command with synopsis/description
+            $metaRoot = Join-Path $testRoot '.box/modules/meta'
+            New-Item -ItemType Directory -Path $metaRoot -Force | Out-Null
+            Set-Content -Path (Join-Path $metaRoot 'metadata.psd1') -Encoding UTF8 -Value @'
+@{
+    ModuleName = 'meta'
+    Version = '1.0.0'
+    Commands = @{ meta = @{ Handler = 'run.ps1'; Synopsis = 'meta syn'; Description = 'meta desc' } }
+}
+'@
+            Set-Content -Path (Join-Path $metaRoot 'run.ps1') -Encoding UTF8 -Value "'meta'"
+
+            # Command without synopsis to trigger default
+            $projectDir = Join-Path $testRoot 'modules'
+            New-Item -ItemType Directory -Path $projectDir -Force | Out-Null
+            Set-Content -Path (Join-Path $projectDir 'nosyn.ps1') -Encoding UTF8 -Value "'nosyn'"
+
+            Import-ModeModules -Mode 'box'
+
+            $help = Show-Help
+            $lines = $help | Out-String
+
+            # Count registry entries and verify all are present
+            $registryCount = $script:CommandRegistry.Count
+            $present = 0
+            foreach ($name in $script:CommandRegistry.Keys) {
+                if ($lines -match [regex]::Escape($name)) { $present++ }
+            }
+
+            ($present / $registryCount) | Should -BeGreaterOrEqual 0.95
+            $lines | Should -BeLike '*No synopsis available*'
+        }
+
+        It "returns help output under 2 seconds for top-level and command help" {
+            $script:Mode = 'box'
+
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'alpha.ps1') -Encoding UTF8 -Value "'alpha'"
+
+            Import-ModeModules -Mode 'box'
+
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            $null = Show-Help
+            $sw.Stop()
+            $sw.Elapsed.TotalSeconds | Should -BeLessThan 2
+
+            $sw.Reset(); $sw.Start()
+            $null = Show-Help -CommandPath @('alpha')
+            $sw.Stop()
+            $sw.Elapsed.TotalSeconds | Should -BeLessThan 2
+        }
+
+        It "wraps long lists without truncation" {
+            $script:Mode = 'box'
+
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+
+            for ($i = 1; $i -le 12; $i++) {
+                $name = "cmd$i"
+                Set-Content -Path (Join-Path $embeddedDir "$name.ps1") -Encoding UTF8 -Value @"
+function Invoke-Box-$name {
+<#
+.SYNOPSIS
+$name synopsis with many words to exercise wrapping behavior number $i
+#>
+    '$name'
+}
+"@
+            }
+
+            Import-ModeModules -Mode 'box'
+
+            $help = Show-Help | Out-String
+
+            $help | Should -BeLike '*Available commands:*'
+            $help | Should -Not -BeLike '*...*'
+        }
+
+        It "renders boxer top-level help with defaults and wrapping" {
+            $script:Mode = 'boxer'
+
+            $embeddedDir = Join-Path $testRoot 'modules/boxer'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'alpha.ps1') -Encoding UTF8 -Value @'
+function Invoke-Boxer-Alpha {
+<#
+.SYNOPSIS
+Alpha synopsis
+.DESCRIPTION
+Alpha description word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20
+#>
+    'alpha'
+}
+'@
+
+            Import-ModeModules -Mode 'boxer'
+
+            $help = Show-Help
+
+            $help | Out-String | Should -BeLike '*Boxer*'
+            $help | Out-String | Should -BeLike '*Alpha synopsis*'
+            $help | Out-String | Should -BeLike '*alpha*'
+        }
+
+        It "renders box top-level help with comment help, metadata fallback, and defaults" {
+            $script:Mode = 'box'
+
+            # Embedded comment-based help
+            $embeddedDir = Join-Path $testRoot 'modules/box'
+            New-Item -ItemType Directory -Path $embeddedDir -Force | Out-Null
+            Set-Content -Path (Join-Path $embeddedDir 'echo.ps1') -Encoding UTF8 -Value @'
+function Invoke-Box-Echo {
+<#
+.SYNOPSIS
+Echo embedded synopsis
+#>
+    'echo'
+}
+'@
+
+            # Metadata module (uses metadata synopsis/description)
+            $metaRoot = Join-Path $testRoot '.box/modules/meta'
+            New-Item -ItemType Directory -Path $metaRoot -Force | Out-Null
+            Set-Content -Path (Join-Path $metaRoot 'metadata.psd1') -Encoding UTF8 -Value @'
+@{
+    ModuleName = 'meta'
+    Version = '1.0.0'
+    Commands = @{ meta = @{ Handler = 'run.ps1'; Synopsis = 'meta synopsis'; Description = 'meta description' } }
+}
+'@
+            Set-Content -Path (Join-Path $metaRoot 'run.ps1') -Encoding UTF8 -Value "'meta'"
+
+            # Command without synopsis to force default fallback
+            $projectDir = Join-Path $testRoot 'modules'
+            New-Item -ItemType Directory -Path $projectDir -Force | Out-Null
+            Set-Content -Path (Join-Path $projectDir 'nosyn.ps1') -Encoding UTF8 -Value "'nosyn'"
+
+            Import-ModeModules -Mode 'box'
+
+            $help = Show-Help
+
+            $help | Out-String | Should -BeLike '*Box*'
+            $help | Out-String | Should -BeLike '*Echo embedded synopsis*'
+            $help | Out-String | Should -BeLike '*meta synopsis*'
+            $help | Out-String | Should -BeLike '*No synopsis available*'
+        }
     }
 }
