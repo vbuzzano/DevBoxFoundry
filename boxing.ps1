@@ -955,7 +955,7 @@ function Update-LocalBoxIfNeeded {
 
         # Get current script's box name (embedded variable set at build time)
         $scriptBoxName = if ($script:BoxName) { $script:BoxName } else { "AmiDevBox" }
-        
+
         if ($localBoxName -ne $scriptBoxName) {
             Write-Verbose "Local box is $localBoxName, script is $scriptBoxName - skipping update"
             return
